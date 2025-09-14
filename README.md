@@ -43,6 +43,21 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
 - **Tabbed Interface**: Clean organization with URL-based navigation
 - **Professional Styling**: Gradient headers, glass-morphism cards, and hover effects
 
+
+## 📝 TODO
+
+1. **Center the navbar**
+2. **Center the settings buttons**
+3. **Make the footer stretch across the full app**
+4. **Add a "floating menu" in the bottom right corner** (dark mode toggle + other similar features)
+5. **Move Wear Frequency Insights to the top of its section in Analytics**
+6. **Stretch empty table in collection container**
+7. **Generate test data**
+8. **Finish actual data**
+9. **Create executable**
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
