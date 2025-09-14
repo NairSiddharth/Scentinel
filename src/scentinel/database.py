@@ -62,13 +62,40 @@ class FragranceNote(Base):
 
 class ScentClassification(Base):
     __tablename__ = 'scent_classifications'
-    
-    id = Column(Integer, primary_key=True) 
+
+    id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)  # freshie, aquatic, gourmand, etc.
     description = Column(String)  # optional description
-    
+
     # Relationship
     colognes = relationship("Cologne", secondary=cologne_classifications, back_populates="classifications")
+
+class ImportHistory(Base):
+    __tablename__ = 'import_history'
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, default=datetime.now)
+    import_type = Column(String, nullable=False)  # 'json', 'csv'
+    filename = Column(String)  # original filename if available
+
+    # Import statistics
+    colognes_added = Column(Integer, default=0)
+    colognes_updated = Column(Integer, default=0)
+    wear_history_added = Column(Integer, default=0)
+    duplicates_found = Column(Integer, default=0)
+    errors_count = Column(Integer, default=0)
+
+    # Resolution summary (for duplicates)
+    resolutions_applied = Column(String)  # JSON string of resolutions
+
+    # Error/warning log
+    error_log = Column(String)  # JSON string of errors/warnings
+
+    # Status
+    status = Column(String, default='completed')  # 'completed', 'failed', 'partial'
+
+    # User notes (optional)
+    notes = Column(String)
 
 class Database:
     def __init__(self, db_name: str = "data/scentinel.db"):
@@ -252,8 +279,96 @@ class Database:
 
         return json.dumps(export_data, indent=2, ensure_ascii=False)
 
-    def import_from_json(self, json_data: str) -> Dict[str, Any]:
-        """Import data from JSON format"""
+    def analyze_import_data(self, json_data: str) -> Dict[str, Any]:
+        """Analyze import data and identify duplicates without importing"""
+        try:
+            data = json.loads(json_data)
+
+            if "colognes" not in data:
+                return {"success": False, "error": "Invalid JSON format: missing 'colognes' key"}
+
+            analysis = {
+                "success": True,
+                "new_colognes": [],
+                "duplicates": [],
+                "errors": []
+            }
+
+            for cologne_data in data["colognes"]:
+                try:
+                    # Skip empty entries
+                    if not cologne_data.get("name") or not cologne_data.get("brand"):
+                        continue
+
+                    # Check if cologne already exists
+                    existing_cologne = self.session.query(Cologne).filter_by(
+                        name=cologne_data["name"],
+                        brand=cologne_data["brand"]
+                    ).first()
+
+                    if existing_cologne:
+                        # Analyze conflicts
+                        conflicts = []
+
+                        # Compare notes
+                        existing_notes = set(note.name for note in existing_cologne.notes)
+                        incoming_notes = set(cologne_data.get("notes", []))
+                        if existing_notes != incoming_notes:
+                            conflicts.append("notes")
+
+                        # Compare classifications
+                        existing_classifications = set(c.name for c in existing_cologne.classifications)
+                        incoming_classifications = set(cologne_data.get("classifications", []))
+                        if existing_classifications != incoming_classifications:
+                            conflicts.append("classifications")
+
+                        # Compare wear history
+                        existing_wear_count = len(existing_cologne.wear_history)
+                        incoming_wear_count = len(cologne_data.get("wear_history", []))
+                        if incoming_wear_count > 0:
+                            conflicts.append("wear_history")
+
+                        # Create duplicate entry with full data comparison
+                        duplicate_entry = {
+                            "name": cologne_data["name"],
+                            "brand": cologne_data["brand"],
+                            "conflicts": conflicts,
+                            "existing": {
+                                "id": existing_cologne.id,
+                                "notes": list(existing_notes),
+                                "classifications": list(existing_classifications),
+                                "wear_history_count": existing_wear_count
+                            },
+                            "incoming": {
+                                "notes": list(incoming_notes),
+                                "classifications": list(incoming_classifications),
+                                "wear_history": cologne_data.get("wear_history", []),
+                                "wear_history_count": incoming_wear_count
+                            }
+                        }
+                        analysis["duplicates"].append(duplicate_entry)
+                    else:
+                        # New cologne
+                        analysis["new_colognes"].append({
+                            "name": cologne_data["name"],
+                            "brand": cologne_data["brand"],
+                            "notes": cologne_data.get("notes", []),
+                            "classifications": cologne_data.get("classifications", []),
+                            "wear_history_count": len(cologne_data.get("wear_history", []))
+                        })
+
+                except Exception as e:
+                    analysis["errors"].append(f"Error analyzing cologne '{cologne_data.get('name', 'Unknown')}': {str(e)}")
+
+            return analysis
+
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": f"Invalid JSON format: {str(e)}"}
+        except Exception as e:
+            return {"success": False, "error": f"Analysis failed: {str(e)}"}
+
+    def import_from_json(self, json_data: str, duplicate_resolutions: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Import data from JSON format with optional duplicate resolution"""
         try:
             data = json.loads(json_data)
 
@@ -262,51 +377,56 @@ class Database:
 
             stats = {
                 "colognes_added": 0,
+                "colognes_updated": 0,
                 "wear_history_added": 0,
                 "errors": []
             }
 
+            # If no duplicate resolutions provided, use the old behavior for backward compatibility
+            if duplicate_resolutions is None:
+                duplicate_resolutions = {}
+
             for cologne_data in data["colognes"]:
                 try:
-                    # Check if cologne already exists (by name and brand)
+                    # Skip empty entries
+                    if not cologne_data.get("name") or not cologne_data.get("brand"):
+                        continue
+
+                    cologne_key = f"{cologne_data['name']}|{cologne_data['brand']}"
+
+                    # Check if cologne already exists
                     existing_cologne = self.session.query(Cologne).filter_by(
                         name=cologne_data["name"],
                         brand=cologne_data["brand"]
                     ).first()
 
                     if existing_cologne:
-                        # Skip if cologne already exists
-                        stats["errors"].append(f"Cologne '{cologne_data['name']}' by {cologne_data['brand']} already exists, skipping")
-                        continue
+                        # Handle duplicate based on resolution
+                        resolution = duplicate_resolutions.get(cologne_key, "skip")
 
-                    # Create new cologne
-                    cologne = self.add_cologne(
-                        name=cologne_data["name"],
-                        brand=cologne_data["brand"],
-                        notes=cologne_data.get("notes"),
-                        classifications=cologne_data.get("classifications")
-                    )
-                    stats["colognes_added"] += 1
+                        if resolution == "skip":
+                            stats["errors"].append(f"Cologne '{cologne_data['name']}' by {cologne_data['brand']} already exists, skipping")
+                            continue
+                        elif resolution == "overwrite":
+                            # Update existing cologne
+                            self._update_cologne(existing_cologne, cologne_data, stats)
+                            stats["colognes_updated"] += 1
+                        elif resolution == "merge":
+                            # Merge data (add new wear history, combine notes)
+                            self._merge_cologne_data(existing_cologne, cologne_data, stats)
+                            stats["colognes_updated"] += 1
+                    else:
+                        # Create new cologne
+                        cologne = self.add_cologne(
+                            name=cologne_data["name"],
+                            brand=cologne_data["brand"],
+                            notes=cologne_data.get("notes"),
+                            classifications=cologne_data.get("classifications")
+                        )
+                        stats["colognes_added"] += 1
 
-                    # Import wear history
-                    if "wear_history" in cologne_data:
-                        for wear_data in cologne_data["wear_history"]:
-                            try:
-                                # Parse the date
-                                wear_date = datetime.fromisoformat(wear_data["date"].replace('Z', '+00:00'))
-
-                                wear = WearHistory(
-                                    cologne_id=cologne.id,
-                                    date_worn=wear_date,
-                                    season=wear_data["season"],
-                                    occasion=wear_data["occasion"],
-                                    rating=wear_data.get("rating")
-                                )
-                                self.session.add(wear)
-                                stats["wear_history_added"] += 1
-
-                            except Exception as e:
-                                stats["errors"].append(f"Error importing wear history for {cologne_data['name']}: {str(e)}")
+                        # Import wear history
+                        self._import_wear_history(cologne, cologne_data, stats)
 
                 except Exception as e:
                     stats["errors"].append(f"Error importing cologne '{cologne_data.get('name', 'Unknown')}': {str(e)}")
@@ -323,6 +443,84 @@ class Database:
         except Exception as e:
             self.session.rollback()
             return {"success": False, "error": f"Import failed: {str(e)}"}
+
+    def _update_cologne(self, existing_cologne: Cologne, cologne_data: dict, stats: dict):
+        """Update existing cologne with new data"""
+        # Clear existing notes and classifications
+        existing_cologne.notes.clear()
+        existing_cologne.classifications.clear()
+
+        # Add new notes
+        if cologne_data.get("notes"):
+            for note_name in cologne_data["notes"]:
+                note = self.session.query(FragranceNote).filter_by(name=note_name).first()
+                if not note:
+                    note = FragranceNote(name=note_name)
+                    self.session.add(note)
+                existing_cologne.notes.append(note)
+
+        # Add new classifications
+        if cologne_data.get("classifications"):
+            for class_name in cologne_data["classifications"]:
+                classification = self.session.query(ScentClassification).filter_by(name=class_name).first()
+                if not classification:
+                    classification = ScentClassification(name=class_name)
+                    self.session.add(classification)
+                existing_cologne.classifications.append(classification)
+
+        # Replace wear history
+        for wear in existing_cologne.wear_history:
+            self.session.delete(wear)
+
+        self._import_wear_history(existing_cologne, cologne_data, stats)
+
+    def _merge_cologne_data(self, existing_cologne: Cologne, cologne_data: dict, stats: dict):
+        """Merge new data with existing cologne"""
+        # Combine notes (add new ones, keep existing)
+        existing_notes = set(note.name for note in existing_cologne.notes)
+        new_notes = set(cologne_data.get("notes", []))
+
+        for note_name in new_notes - existing_notes:
+            note = self.session.query(FragranceNote).filter_by(name=note_name).first()
+            if not note:
+                note = FragranceNote(name=note_name)
+                self.session.add(note)
+            existing_cologne.notes.append(note)
+
+        # Combine classifications
+        existing_classifications = set(c.name for c in existing_cologne.classifications)
+        new_classifications = set(cologne_data.get("classifications", []))
+
+        for class_name in new_classifications - existing_classifications:
+            classification = self.session.query(ScentClassification).filter_by(name=class_name).first()
+            if not classification:
+                classification = ScentClassification(name=class_name)
+                self.session.add(classification)
+            existing_cologne.classifications.append(classification)
+
+        # Add new wear history (keep existing)
+        self._import_wear_history(existing_cologne, cologne_data, stats)
+
+    def _import_wear_history(self, cologne: Cologne, cologne_data: dict, stats: dict):
+        """Import wear history for a cologne"""
+        if "wear_history" in cologne_data:
+            for wear_data in cologne_data["wear_history"]:
+                try:
+                    # Parse the date
+                    wear_date = datetime.fromisoformat(wear_data["date"].replace('Z', '+00:00'))
+
+                    wear = WearHistory(
+                        cologne_id=cologne.id,
+                        date_worn=wear_date,
+                        season=wear_data["season"],
+                        occasion=wear_data["occasion"],
+                        rating=wear_data.get("rating")
+                    )
+                    self.session.add(wear)
+                    stats["wear_history_added"] += 1
+
+                except Exception as e:
+                    stats["errors"].append(f"Error importing wear history for {cologne_data['name']}: {str(e)}")
 
     def get_analytics_data(self) -> Dict[str, Any]:
         """Get comprehensive analytics data for dashboard"""
@@ -806,6 +1004,81 @@ class Database:
         self.session.commit()
         self._rebuild_recommender()
         return wear
+
+    def log_import_transaction(self, import_type: str, result: Dict[str, Any], filename: Optional[str] = None,
+                              resolutions: Optional[Dict[str, str]] = None, analysis: Optional[Dict[str, Any]] = None) -> ImportHistory:
+        """Log an import transaction for historical tracking"""
+        import_log = ImportHistory(
+            import_type=import_type,
+            filename=filename,
+            colognes_added=result.get('colognes_added', 0),
+            colognes_updated=result.get('colognes_updated', 0),
+            wear_history_added=result.get('wear_history_added', 0),
+            duplicates_found=len(analysis.get('duplicates', [])) if analysis else 0,
+            errors_count=len(result.get('errors', [])),
+            resolutions_applied=json.dumps(resolutions) if resolutions else None,
+            error_log=json.dumps(result.get('errors', [])),
+            status='completed' if result.get('success') else 'failed'
+        )
+
+        self.session.add(import_log)
+        self.session.commit()
+        return import_log
+
+    def get_import_history(self, limit: int = 50) -> List[ImportHistory]:
+        """Get recent import history"""
+        return self.session.query(ImportHistory).order_by(
+            ImportHistory.timestamp.desc()
+        ).limit(limit).all()
+
+    def get_import_statistics(self) -> Dict[str, Any]:
+        """Get overall import statistics"""
+        total_imports = self.session.query(func.count(ImportHistory.id)).scalar()
+        successful_imports = self.session.query(func.count(ImportHistory.id)).filter(
+            ImportHistory.status == 'completed'
+        ).scalar()
+
+        total_colognes_imported = self.session.query(
+            func.sum(ImportHistory.colognes_added)
+        ).scalar() or 0
+
+        total_duplicates_handled = self.session.query(
+            func.sum(ImportHistory.duplicates_found)
+        ).scalar() or 0
+
+        # Recent imports (last 30 days)
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        recent_imports = self.session.query(func.count(ImportHistory.id)).filter(
+            ImportHistory.timestamp >= thirty_days_ago
+        ).scalar()
+
+        return {
+            'total_imports': total_imports or 0,
+            'successful_imports': successful_imports or 0,
+            'failed_imports': (total_imports or 0) - (successful_imports or 0),
+            'total_colognes_imported': total_colognes_imported,
+            'total_duplicates_handled': total_duplicates_handled,
+            'recent_imports_30d': recent_imports or 0,
+            'success_rate': round((successful_imports / total_imports * 100), 1) if total_imports > 0 else 0
+        }
+
+    def delete_import_log(self, import_id: int) -> bool:
+        """Delete a specific import log entry"""
+        import_log = self.session.query(ImportHistory).filter_by(id=import_id).first()
+        if import_log:
+            self.session.delete(import_log)
+            self.session.commit()
+            return True
+        return False
+
+    def add_import_notes(self, import_id: int, notes: str) -> bool:
+        """Add notes to an import log entry"""
+        import_log = self.session.query(ImportHistory).filter_by(id=import_id).first()
+        if import_log:
+            import_log.notes = notes  # type: ignore
+            self.session.commit()
+            return True
+        return False
 
     def close(self):
         self.session.close()

@@ -2,7 +2,7 @@
 
 **Your intelligent fragrance companion for tracking, analyzing, and discovering your perfect scent rotation.**
 
-**Note that this README.md was generated via Claude Code, it has been proofread but please report any errors spotted in the instructions and I will take a look!.**
+**Note that this README.md was generated via Claude Code, it has been proofread but please report any errors spotted in the instructions and I will take a look!**
 
 Scentinel transforms basic cologne tracking into a comprehensive fragrance management system with AI-powered recommendations, detailed analytics, and professional bottle imagery.
 
@@ -43,7 +43,6 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
 - **Tabbed Interface**: Clean organization with URL-based navigation
 - **Professional Styling**: Gradient headers, glass-morphism cards, and hover effects
 
-
 ## 📝 TODO
 
 1. **Center the navbar**
@@ -55,6 +54,16 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
 7. **Generate test data**
 8. **Finish actual data**
 9. **Create executable**
+10. **Update README installation instructions** - Fix references to `app.py` (should be `src/scentinel/main.py`)
+11. **Add error handling for missing image directory** - Graceful fallback when `data/images/cologne.png` is missing
+12. **Configuration file support** - Add config file for port, database path, and other settings
+13. **Input validation** - Sanitize and validate all user inputs for security
+14. **Loading states/spinners** - Add loading indicators for analytics refresh and data operations
+15. **Confirm dialogs for destructive actions** - Add confirmation for data import/export operations
+16. **Bulk operations** - Allow selecting multiple colognes for batch actions
+17. **Advanced search filters** - Add filters by rating, last worn date, notes, etc.
+18. **Usage recommendations widget** - Show "You haven't worn X in Y days" notifications
+19. **Performance optimization** - Optimize for large collections (1000+ fragrances)
 
 ---
 
@@ -97,6 +106,7 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
    ```
 
 5. **Open your browser**
+
    Navigate to `http://localhost:8080`
 
 ## 📖 Usage Guide
@@ -116,6 +126,38 @@ Upload a CSV file with columns:
 - `brand`: Brand name
 - `notes`: Semicolon-separated fragrance notes
 - `classifications`: Semicolon-separated categories
+
+### JSON Templates & Bulk Import
+
+For larger collections, use our JSON templates for efficient bulk import:
+
+#### **Quick Start Templates**
+
+- `data/cologne_example_template.json` - 5 real examples + 5 empty slots
+- `data/cologne_template_50.json` - 50 empty cologne slots
+- `data/TEMPLATE_GUIDE.md` - Complete usage documentation
+
+#### **Custom Template Generator**
+
+Generate templates with any number of slots:
+
+```bash
+# Generate 100 empty cologne slots
+python scripts/generate_template.py 100
+
+# Generate 50 slots with 5 example colognes
+python scripts/generate_template.py 50 --with-examples
+
+# Custom filename
+python scripts/generate_template.py 25 --output my_collection.json
+```
+
+**Template Features:**
+
+- ✅ **Additive Imports**: Multiple imports add to your collection (50→100→150)
+- ✅ **Duplicate Prevention**: Skips existing colognes (by name + brand)
+- ✅ **Comprehensive Data**: Supports notes, classifications, and wear history
+- ✅ **Flexible**: Empty templates or pre-filled examples
 
 ### Data Management
 

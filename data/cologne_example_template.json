@@ -1,0 +1,133 @@
+{
+  "export_date": "2024-09-14T00:00:00",
+  "version": "1.0",
+  "colognes": [
+    {
+      "id": 1,
+      "name": "Bleu de Chanel",
+      "brand": "Chanel",
+      "notes": ["bergamot", "lemon", "cedar", "sandalwood", "ginger", "nutmeg", "jasmine", "white musk"],
+      "classifications": ["fresh", "woody", "aromatic"],
+      "wear_history": [
+        {
+          "date": "2024-09-10T08:00:00",
+          "season": "fall",
+          "occasion": "work",
+          "rating": 4.5
+        },
+        {
+          "date": "2024-09-05T19:00:00",
+          "season": "fall",
+          "occasion": "date",
+          "rating": 5.0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Sauvage",
+      "brand": "Dior",
+      "notes": ["bergamot", "pepper", "lavender", "sichuan pepper", "elemi", "vetiver", "cedar", "labdanum"],
+      "classifications": ["fresh", "spicy", "aromatic"],
+      "wear_history": [
+        {
+          "date": "2024-09-08T14:00:00",
+          "season": "fall",
+          "occasion": "casual",
+          "rating": 4.0
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Tom Ford Oud Wood",
+      "brand": "Tom Ford",
+      "notes": ["oud", "rosewood", "cardamom", "sandalwood", "sichuan pepper", "vanilla", "amber"],
+      "classifications": ["woody", "oriental", "luxury"],
+      "wear_history": [
+        {
+          "date": "2024-09-12T20:00:00",
+          "season": "fall",
+          "occasion": "formal",
+          "rating": 4.8
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Acqua di Gio",
+      "brand": "Giorgio Armani",
+      "notes": ["bergamot", "lime", "lemon", "jasmine", "orange blossom", "cedar", "white musk", "oakmoss"],
+      "classifications": ["fresh", "aquatic", "citrus"],
+      "wear_history": [
+        {
+          "date": "2024-08-25T10:00:00",
+          "season": "summer",
+          "occasion": "casual",
+          "rating": 3.5
+        },
+        {
+          "date": "2024-08-20T16:00:00",
+          "season": "summer",
+          "occasion": "exercise",
+          "rating": 4.0
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Creed Aventus",
+      "brand": "Creed",
+      "notes": ["pineapple", "bergamot", "apple", "blackcurrant", "birch", "patchouli", "oakmoss", "ambergris", "vanilla"],
+      "classifications": ["fruity", "woody", "smoky", "luxury"],
+      "wear_history": [
+        {
+          "date": "2024-09-01T18:00:00",
+          "season": "fall",
+          "occasion": "special",
+          "rating": 5.0
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "",
+      "brand": "",
+      "notes": [],
+      "classifications": [],
+      "wear_history": []
+    },
+    {
+      "id": 7,
+      "name": "",
+      "brand": "",
+      "notes": [],
+      "classifications": [],
+      "wear_history": []
+    },
+    {
+      "id": 8,
+      "name": "",
+      "brand": "",
+      "notes": [],
+      "classifications": [],
+      "wear_history": []
+    },
+    {
+      "id": 9,
+      "name": "",
+      "brand": "",
+      "notes": [],
+      "classifications": [],
+      "wear_history": []
+    },
+    {
+      "id": 10,
+      "name": "",
+      "brand": "",
+      "notes": [],
+      "classifications": [],
+      "wear_history": []
+    }
+  ]
+}
