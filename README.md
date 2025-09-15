@@ -102,7 +102,7 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
 4. **Run the application**
 
    ```bash
-   python app.py
+   python run.py
    ```
 
 5. **Open your browser**
@@ -169,10 +169,10 @@ python scripts/generate_template.py 25 --output my_collection.json
 
 ### Core Components
 
-- **`app.py`**: Main NiceGUI application with tabbed interface
-- **`database.py`**: SQLAlchemy models and analytics engine
-- **`recommender.py`**: ML-based recommendation algorithms
-- **`photo_api.py`**: Image scraping and compression system
+- **`src/scentinel/main.py`**: Main NiceGUI application with tabbed interface
+- **`src/scentinel/database.py`**: SQLAlchemy models and analytics engine
+- **`src/scentinel/recommender.py`**: ML-based recommendation algorithms
+- **`run.py`**: Application launcher script
 
 ### Database Schema
 
@@ -234,7 +234,7 @@ We welcome contributions! Please see our contributing guidelines:
 pip install -r requirements.txt
 
 # Run with auto-reload for development
-python app.py  # reload=True enabled in development
+python run.py  # starts the application
 ```
 
 ## 📝 License

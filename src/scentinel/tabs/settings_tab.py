@@ -72,7 +72,7 @@ class SettingsTab(BaseTab):
                         ui.label('Import colognes from CSV file (basic data only)').classes(
                             'text-gray-600 dark:text-gray-400 mb-4'
                         )
-                        ui.upload(on_upload=self.handle_csv_upload, multiple=False).props('flat accept=".csv"').classes(
+                        ui.upload(on_upload=self.confirm_csv_upload, multiple=False).props('flat accept=".csv"').classes(
                             'bg-orange-50 dark:bg-orange-900 border-2 border-dashed border-orange-300 '
                             'dark:border-orange-700 rounded-lg p-6 text-orange-700 dark:text-orange-300 '
                             'hover:bg-orange-100 dark:hover:bg-orange-800 smooth-transition mx-auto'
@@ -184,16 +184,19 @@ class SettingsTab(BaseTab):
             ui.notify('Collection exported successfully!', type='positive')
 
         except Exception as ex:
-            ui.notify(f'Error exporting collection: {str(ex)}', type='negative')
+            error_msg = str(ex)
+            ui.notify(f'Error exporting collection:\n{error_msg}', type='negative', multi_line=True)
 
     def show_import_dialog(self):
         """Show dialog for importing JSON collection"""
         with ui.dialog() as dialog, ui.card():
             ui.label('Import Collection').classes('text-h5 mb-4')
+            ui.label('⚠️ WARNING: This will import new colognes to your collection.').classes('mb-2 text-amber-600 font-semibold')
+            ui.label('Existing colognes with the same name and brand will be skipped.').classes('mb-4 text-gray-600 dark:text-gray-400')
             ui.label('Select a JSON backup file to import:').classes('mb-4')
 
             ui.upload(
-                on_upload=lambda e: self.handle_json_import(e, dialog),
+                on_upload=lambda e: self.confirm_json_import(e, dialog),
                 multiple=False,
                 auto_upload=True
             ).props('accept=".json"').classes('w-full')
@@ -202,6 +205,48 @@ class SettingsTab(BaseTab):
                 ui.button('Cancel', on_click=dialog.close).props('flat')
 
         dialog.open()
+
+    def confirm_json_import(self, e: Any, dialog: Any):
+        """Show confirmation dialog before importing JSON"""
+        dialog.close()  # Close the file selection dialog
+
+        with ui.dialog() as confirm_dialog, ui.card():
+            ui.label('Confirm Import').classes('text-h5 mb-4')
+            ui.label('🔄 Are you sure you want to import this collection?').classes('mb-2 text-lg')
+            ui.label('This action will:').classes('mb-2 font-semibold')
+            with ui.column().classes('ml-4 mb-4'):
+                ui.label('• Add new colognes to your collection')
+                ui.label('• Import all wear history and ratings')
+                ui.label('• Skip duplicates (same name + brand)')
+                ui.label('• This action cannot be easily undone')
+
+            with ui.row().classes('w-full justify-end gap-2 mt-4'):
+                ui.button('Cancel', on_click=confirm_dialog.close).props('flat')
+                ui.button('Import Collection',
+                         on_click=lambda: self.handle_json_import(e, confirm_dialog)).classes(
+                    'bg-amber-600 hover:bg-amber-700 text-white'
+                )
+        confirm_dialog.open()
+
+    def confirm_csv_upload(self, e: Any):
+        """Show confirmation dialog before importing CSV"""
+        with ui.dialog() as confirm_dialog, ui.card():
+            ui.label('Confirm CSV Import').classes('text-h5 mb-4')
+            ui.label('📊 Are you sure you want to import this CSV file?').classes('mb-2 text-lg')
+            ui.label('This action will:').classes('mb-2 font-semibold')
+            with ui.column().classes('ml-4 mb-4'):
+                ui.label('• Add new colognes from the CSV file')
+                ui.label('• Parse notes and classifications')
+                ui.label('• Skip rows with missing required data')
+                ui.label('• Show a summary when complete')
+
+            with ui.row().classes('w-full justify-end gap-2 mt-4'):
+                ui.button('Cancel', on_click=confirm_dialog.close).props('flat')
+                ui.button('Import CSV',
+                         on_click=lambda: self.handle_csv_upload(e, confirm_dialog)).classes(
+                    'bg-orange-600 hover:bg-orange-700 text-white'
+                )
+        confirm_dialog.open()
 
     def handle_json_import(self, e: Any, dialog: Any):
         """Handle JSON file import with duplicate resolution"""
@@ -212,7 +257,8 @@ class SettingsTab(BaseTab):
             analysis = self.db.analyze_import_data(content)
 
             if not analysis["success"]:
-                ui.notify(f'Import failed: {analysis["error"]}', type='negative')
+                error_msg = analysis["error"]
+                ui.notify(f'Import failed:\n{error_msg}', type='negative', multi_line=True)
                 dialog.close()
                 return
 
@@ -226,12 +272,15 @@ class SettingsTab(BaseTab):
                 self.proceed_with_import(content, {}, analysis)
 
         except Exception as ex:
-            ui.notify(f'Error analyzing import file: {str(ex)}', type='negative')
+            error_msg = str(ex)
+            ui.notify(f'Error analyzing import file:\n{error_msg}', type='negative', multi_line=True)
             dialog.close()
 
-    def handle_csv_upload(self, e: Any):
+    def handle_csv_upload(self, e: Any, dialog: Any = None):
         """Handle CSV file upload"""
         try:
+            if dialog:
+                dialog.close()  # Close confirmation dialog
             content = e.content.decode('utf-8')
             csv_reader = csv.DictReader(io.StringIO(content))
 
@@ -297,7 +346,8 @@ class SettingsTab(BaseTab):
                 filename=getattr(e, 'name', 'uploaded_file.csv')
             )
 
-            ui.notify(f'Error uploading CSV: {str(ex)}', type='negative')
+            error_msg = str(ex)
+            ui.notify(f'Error uploading CSV:\n{error_msg}', type='negative', multi_line=True)
 
     def show_duplicate_resolution_dialog(self, json_content: str, analysis: dict):
         """Show dialog for resolving duplicate colognes"""
@@ -496,10 +546,12 @@ class SettingsTab(BaseTab):
                 self.show_import_results_dialog(result)
 
             else:
-                ui.notify(f'Import failed: {result["error"]}', type='negative')
+                error_msg = result["error"]
+                ui.notify(f'Import failed:\n{error_msg}', type='negative', multi_line=True)
 
         except Exception as ex:
-            ui.notify(f'Error during import: {str(ex)}', type='negative')
+            error_msg = str(ex)
+            ui.notify(f'Error during import:\n{error_msg}', type='negative', multi_line=True)
 
     def show_import_results_dialog(self, result: dict):
         """Show detailed import results in a dialog"""

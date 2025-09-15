@@ -81,6 +81,66 @@ class AnalyticsTab(BaseTab):
                             )
                             ui.label('Recent Wears (30d)').classes('text-orange-100 font-medium')
 
+                # Wear Frequency Insights Section
+                ui.label('Wear Frequency Insights').classes(
+                    'text-2xl font-semibold text-gray-800 dark:text-gray-200 mt-8 mb-4'
+                )
+
+                frequency_insights = analytics_data.get('wear_frequency_insights', {})
+                if frequency_insights:
+                    with ui.row().classes('w-full gap-6 mb-8'):
+                        # Neglected fragrances
+                        if frequency_insights.get('neglected'):
+                            with ui.card().classes(
+                                'flex-1 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl '
+                                'border border-gray-200 dark:border-gray-700 smooth-transition'
+                            ):
+                                with ui.card_section().classes('p-6'):
+                                    with ui.row().classes('items-center gap-3 mb-4'):
+                                        ui.icon('schedule', size='1.5em').classes('text-orange-500')
+                                        ui.label('Neglected Bottles').classes(
+                                            'text-lg font-semibold text-gray-800 dark:text-gray-200'
+                                        )
+
+                                    for cologne in frequency_insights['neglected'][:5]:
+                                        with ui.row().classes('items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700'):
+                                            with ui.column():
+                                                ui.label(f"{cologne['name']}").classes(
+                                                    'font-medium text-gray-800 dark:text-gray-200'
+                                                )
+                                                ui.label(f"{cologne['brand']}").classes(
+                                                    'text-sm text-gray-600 dark:text-gray-400'
+                                                )
+                                            ui.label(f"{cologne['days_since_worn']} days ago").classes(
+                                                'text-sm text-orange-600 dark:text-orange-400'
+                                            )
+
+                        # Well-rotated fragrances
+                        if frequency_insights.get('balanced'):
+                            with ui.card().classes(
+                                'flex-1 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl '
+                                'border border-gray-200 dark:border-gray-700 smooth-transition'
+                            ):
+                                with ui.card_section().classes('p-6'):
+                                    with ui.row().classes('items-center gap-3 mb-4'):
+                                        ui.icon('balance', size='1.5em').classes('text-green-500')
+                                        ui.label('Well-Rotated').classes(
+                                            'text-lg font-semibold text-gray-800 dark:text-gray-200'
+                                        )
+
+                                    for cologne in frequency_insights['balanced'][:5]:
+                                        with ui.row().classes('items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700'):
+                                            with ui.column():
+                                                ui.label(f"{cologne['name']}").classes(
+                                                    'font-medium text-gray-800 dark:text-gray-200'
+                                                )
+                                                ui.label(f"{cologne['brand']}").classes(
+                                                    'text-sm text-gray-600 dark:text-gray-400'
+                                                )
+                                            ui.label(f"⭐ {cologne['avg_rating']:.1f}").classes(
+                                                'text-sm text-green-600 dark:text-green-400'
+                                            )
+
                 # Charts in grid layout with enhanced cards
                 with ui.row().classes('w-full gap-6'):
                     # Left column
@@ -164,65 +224,6 @@ class AnalyticsTab(BaseTab):
                         notes_fig.update_layout(height=300)
                         ui.plotly(notes_fig).classes('w-full flex-1')
 
-                # Wear Frequency Insights Section
-                ui.label('Wear Frequency Insights').classes(
-                    'text-2xl font-semibold text-gray-800 dark:text-gray-200 mt-8 mb-4'
-                )
-
-                frequency_insights = analytics_data.get('wear_frequency_insights', {})
-                if frequency_insights:
-                    with ui.row().classes('w-full gap-6'):
-                        # Neglected fragrances
-                        if frequency_insights.get('neglected'):
-                            with ui.card().classes(
-                                'flex-1 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl '
-                                'border border-gray-200 dark:border-gray-700 smooth-transition'
-                            ):
-                                with ui.card_section().classes('p-6'):
-                                    with ui.row().classes('items-center gap-3 mb-4'):
-                                        ui.icon('schedule', size='1.5em').classes('text-orange-500')
-                                        ui.label('Neglected Bottles').classes(
-                                            'text-lg font-semibold text-gray-800 dark:text-gray-200'
-                                        )
-
-                                    for cologne in frequency_insights['neglected'][:5]:
-                                        with ui.row().classes('items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700'):
-                                            with ui.column():
-                                                ui.label(f"{cologne['name']}").classes(
-                                                    'font-medium text-gray-800 dark:text-gray-200'
-                                                )
-                                                ui.label(f"{cologne['brand']}").classes(
-                                                    'text-sm text-gray-600 dark:text-gray-400'
-                                                )
-                                            ui.label(f"{cologne['days_since_worn']} days ago").classes(
-                                                'text-sm text-orange-600 dark:text-orange-400'
-                                            )
-
-                        # Well-rotated fragrances
-                        if frequency_insights.get('balanced'):
-                            with ui.card().classes(
-                                'flex-1 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl '
-                                'border border-gray-200 dark:border-gray-700 smooth-transition'
-                            ):
-                                with ui.card_section().classes('p-6'):
-                                    with ui.row().classes('items-center gap-3 mb-4'):
-                                        ui.icon('balance', size='1.5em').classes('text-green-500')
-                                        ui.label('Well-Rotated').classes(
-                                            'text-lg font-semibold text-gray-800 dark:text-gray-200'
-                                        )
-
-                                    for cologne in frequency_insights['balanced'][:5]:
-                                        with ui.row().classes('items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700'):
-                                            with ui.column():
-                                                ui.label(f"{cologne['name']}").classes(
-                                                    'font-medium text-gray-800 dark:text-gray-200'
-                                                )
-                                                ui.label(f"{cologne['brand']}").classes(
-                                                    'text-sm text-gray-600 dark:text-gray-400'
-                                                )
-                                            ui.label(f"⭐ {cologne['avg_rating']:.1f}").classes(
-                                                'text-sm text-green-600 dark:text-green-400'
-                                            )
 
                 # Seasonal Deep Dive Section
                 ui.label('Seasonal Deep Dive').classes(

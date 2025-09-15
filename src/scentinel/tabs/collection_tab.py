@@ -72,9 +72,19 @@ class CollectionTab(BaseTab):
                         'border border-gray-200 dark:border-gray-700 smooth-transition hover-lift'
                     ):
                         with ui.card_section().classes('p-6'):
-                            ui.label('Today\'s Recommendation').classes(
-                                'text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4'
-                            )
+                            with ui.row().classes('w-full items-center justify-between mb-4'):
+                                ui.label('Today\'s Recommendation').classes(
+                                    'text-xl font-semibold text-gray-800 dark:text-gray-200'
+                                )
+                                with ui.button(icon='help_outline').props('flat round size=sm').classes(
+                                    'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                                ):
+                                    ui.tooltip('Recommendations based on:\n'
+                                              '• Wear history & ratings\n'
+                                              '• Seasonal patterns\n'
+                                              '• Similar fragrances\n'
+                                              '• Recently neglected bottles\n'
+                                              '• System learns from your usage!')
                             with ui.row().classes('w-full gap-2 mb-4'):
                                 ui.button('Regenerate', on_click=self.refresh_recommendation).classes(
                                     'bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 '
@@ -159,19 +169,20 @@ class CollectionTab(BaseTab):
                     with ui.row().classes('items-center gap-2'):
                         # Bulk import button
                         if self.settings_tab:
-                            with ui.upload(on_upload=self.settings_tab.handle_csv_upload, multiple=False).props('accept=".csv"').classes(
-                                'bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 '
-                                'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift'
-                            ) as upload:
-                                ui.button('Bulk Import', icon='upload_file').props('flat').classes('text-white')
-                                upload.tooltip('Upload CSV with columns: name, brand, notes (semicolon separated), classifications (semicolon separated)')
+                            with ui.element():
+                                ui.upload(
+                                    label="Bulk Import",
+                                    on_upload=self.settings_tab.confirm_csv_upload,
+                                    multiple=False
+                                ).props('accept=".csv"').style('height: 42px;')
+                                ui.tooltip('Upload CSV with columns:\n• name\n• brand\n• notes (semicolon separated)\n• classifications (semicolon separated)')
 
                         ui.button('Add Cologne',
                                   on_click=self.show_add_cologne_dialog,
                                   icon='add').classes(
                             'bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 '
                             'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift'
-                        )
+                        ).style('height: 42px;')
 
                 # Ag-grid table
                 self.selected_cologne_id = None  # Track selected cologne
@@ -270,8 +281,31 @@ class CollectionTab(BaseTab):
     def add_cologne(self, dialog: Any, name: Optional[str], brand: Optional[str],
                     notes_str: Optional[str], classifications_str: Optional[str]):
         """Add a new cologne to the collection"""
-        if not name or not brand:
-            ui.notify('Name and brand are required', type='warning')
+        # Input validation
+        if not name or not name.strip():
+            ui.notify('Cologne name is required', type='warning')
+            return
+        if not brand or not brand.strip():
+            ui.notify('Brand is required', type='warning')
+            return
+
+        # Sanitize inputs
+        name = name.strip()[:100]  # Max 100 characters
+        brand = brand.strip()[:100]  # Max 100 characters
+
+        if len(name) < 2:
+            ui.notify('Cologne name must be at least 2 characters', type='warning')
+            return
+        if len(brand) < 2:
+            ui.notify('Brand must be at least 2 characters', type='warning')
+            return
+
+        # Validate notes and classifications format
+        if notes_str and len(notes_str.strip()) > 500:
+            ui.notify('Notes are too long (max 500 characters)', type='warning')
+            return
+        if classifications_str and len(classifications_str.strip()) > 200:
+            ui.notify('Classifications are too long (max 200 characters)', type='warning')
             return
 
         try:
@@ -290,7 +324,8 @@ class CollectionTab(BaseTab):
             ui.notify(f'Added {name} by {brand}', type='positive')
 
         except Exception as e:
-            ui.notify(f'Error adding cologne: {str(e)}', type='negative')
+            error_msg = str(e)
+            ui.notify(f'Error adding cologne:\n{error_msg}', type='negative', multi_line=True)
 
     def show_log_wear_dialog(self, cologne_id: Optional[int] = None):
         """Show dialog to log a wear for a specific cologne, or generic if cologne_id is None"""
@@ -316,23 +351,37 @@ class CollectionTab(BaseTab):
     def log_wear(self, dialog: Any, cologne_id: Optional[int], season: Optional[str],
                  occasion: Optional[str], rating: Optional[float]):
         """Log a wear for a cologne"""
+        # Input validation
+        if cologne_id is None:
+            ui.notify('No cologne selected', type='warning')
+            return
+
+        if not season or season not in ['spring', 'summer', 'fall', 'winter']:
+            ui.notify('Please select a valid season', type='warning')
+            return
+
+        if not occasion or occasion not in ['casual', 'work', 'formal', 'date', 'special']:
+            ui.notify('Please select a valid occasion', type='warning')
+            return
+
+        if rating is None or not (1 <= rating <= 5):
+            ui.notify('Rating must be between 1 and 5', type='warning')
+            return
+
         try:
-            # Only log if all required fields are present
-            if cologne_id is not None and season and occasion:
-                self.db.log_wear(cologne_id, season, occasion, rating)
-                self.refresh_recent_wears()
-                self.refresh_recommendation()
+            self.db.log_wear(cologne_id, season, occasion, rating)
+            self.refresh_recent_wears()
+            self.refresh_recommendation()
 
-                # Notify data change callback if set
-                if self.data_change_callback:
-                    self.data_change_callback()
+            # Notify data change callback if set
+            if self.data_change_callback:
+                self.data_change_callback()
 
-                dialog.close()
-                ui.notify('Wear logged successfully!', type='positive')
-            else:
-                ui.notify('Missing required fields for logging wear.', type='warning')
+            dialog.close()
+            ui.notify('Wear logged successfully!', type='positive')
         except Exception as e:
-            ui.notify(f'Error logging wear: {str(e)}', type='negative')
+            error_msg = str(e)
+            ui.notify(f'Error logging wear:\n{error_msg}', type='negative', multi_line=True)
 
     def quick_log_wear(self, cologne_id: Any):
         """Quick log wear with automatic season detection"""

@@ -30,6 +30,20 @@ class ScentinelApp:
     def toggle_dark_mode(self):
         """Toggle dark mode and update UI"""
         self.dark_mode = not self.dark_mode
+        self._update_dark_mode_ui()
+        ui.notify(f'Switched to {"dark" if self.dark_mode else "light"} mode', type='info')
+
+    def set_dark_mode(self, enable: bool):
+        """Set dark mode to specific state"""
+        if self.dark_mode != enable:
+            self.dark_mode = enable
+            self._update_dark_mode_ui()
+            ui.notify(f'Switched to {"dark" if enable else "light"} mode', type='info')
+        else:
+            ui.notify(f'Already in {"dark" if enable else "light"} mode', type='info')
+
+    def _update_dark_mode_ui(self):
+        """Update UI elements for dark mode"""
         # Update body class
         mode = 'dark-mode' if self.dark_mode else 'light-mode'
         ui.run_javascript(f'''
@@ -48,7 +62,6 @@ class ScentinelApp:
                 self.footer_container.classes(remove='footer-gradient-light', add='footer-gradient-dark')
             else:
                 self.footer_container.classes(remove='footer-gradient-dark', add='footer-gradient-light')
-        ui.notify(f'Switched to {"dark" if self.dark_mode else "light"} mode', type='info')
 
     def __init__(self):
         self.db = Database()
@@ -158,12 +171,6 @@ class ScentinelApp:
             .footer-btn:hover {
                 background: #ffffff30 !important;
             }
-            .accessibility-menu {
-                position: fixed;
-                bottom: 80px; /* Above footer height + padding */
-                right: 20px;
-                z-index: 1000;
-            }
         </style>
         ''')
         # Set up dark mode and tab restore logic
@@ -226,17 +233,15 @@ class ScentinelApp:
                         self.nav_buttons[tab_id] = btn
                         btn.classes('px-4 py-2 rounded-lg smooth-transition nav-inactive')
 
-                # Right: Quick Actions Menu
-                with ui.button(icon='add', on_click=lambda: None).classes(
-                    'text-white font-medium px-4 py-2 rounded-lg smooth-transition hover-lift'
+                # Right: Quick Actions Dropdown
+                with ui.dropdown_button('Quick Actions').classes(
+                    'text-white font-medium px-3 py-1.5 rounded-lg smooth-transition hover-lift text-sm'
                 ).style('background: #ffffff30; border: 1px solid #ffffff50;').props('flat'):
-                    ui.label('Quick Actions').classes('ml-2')
-                    with ui.menu().props('auto-close'):
-                        ui.menu_item('Add Cologne', on_click=self.show_add_cologne_dialog).props('icon=add')
-                        ui.menu_item('Log Wear', on_click=self.show_log_wear_dialog).props('icon=event_note')
-                        ui.separator()
-                        ui.menu_item('Export Data', on_click=lambda: self.settings_tab.export_collection()).props('icon=download')
-                        ui.menu_item('Import Data', on_click=lambda: self.settings_tab.show_import_dialog()).props('icon=upload')
+                    ui.item('Add Cologne', on_click=self.show_add_cologne_dialog).props('icon=add')
+                    ui.item('Log Wear', on_click=self.show_log_wear_dialog).props('icon=event_note')
+                    ui.separator()
+                    ui.item('Export Data', on_click=lambda: self.settings_tab.export_collection()).props('icon=download')
+                    ui.item('Import Data', on_click=lambda: self.settings_tab.show_import_dialog()).props('icon=upload')
 
         # Hidden tabs for routing
         with ui.element('div').classes('hidden'):
@@ -326,45 +331,29 @@ class ScentinelApp:
                     ui.label('Made with ❤️ using NiceGUI').classes('text-white text-xs opacity-75 ml-2')
 
     def setup_accessibility_menu(self):
-        """Setup floating accessibility menu in bottom right corner"""
-        with ui.element('div').classes('accessibility-menu'):
-            with ui.button(icon='accessibility', on_click=lambda: None).classes(
-                'bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl smooth-transition'
-            ).props('flat'):
-                with ui.menu().props():
-                    with ui.menu_item('Dark Mode').props('icon=dark_mode'):
-                        with ui.item_section().props('side'):
-                            ui.switch(value=self.dark_mode, on_change=lambda: self.toggle_dark_mode())
-                    ui.separator()
+        """Setup floating accessibility menu using FAB of FABs"""
+        # Position in bottom-right corner above footer, opens to the left
+        with ui.fab(icon='accessibility', color='blue', direction='left').classes('fixed bottom-20 right-4 z-[1000]').style('position: fixed; bottom: 5rem; right: 1rem; z-index: 1000;'):
+            # Category FABs - each opens upward
+            with ui.fab(icon='dark_mode', color='indigo', direction='up').props('label=Theme'):
+                ui.fab_action('Light Mode', on_click=lambda: self.set_dark_mode(False)).props('icon=light_mode label="Light Mode"')
+                ui.fab_action('Dark Mode', on_click=lambda: self.set_dark_mode(True)).props('icon=dark_mode label="Dark Mode"')
+                ui.fab_action('Auto Toggle', on_click=self.toggle_dark_mode).props('icon=brightness_auto label="Auto Toggle"')
 
-                    # Font Size submenu
-                    with ui.menu_item('Font Size', auto_close=False).props('icon=text_fields'):
-                        with ui.item_section().props('side'):
-                            ui.icon('keyboard_arrow_left')
-                        with ui.menu().props('anchor="top end" self="top start" auto-close'):
-                            ui.menu_item('Small', on_click=lambda: self.set_font_size('small')).props('icon=text_decrease')
-                            ui.menu_item('Medium', on_click=lambda: self.set_font_size('medium')).props('icon=text_fields')
-                            ui.menu_item('Large', on_click=lambda: self.set_font_size('large')).props('icon=text_increase')
-                            ui.menu_item('Extra Large', on_click=lambda: self.set_font_size('extra-large')).props('icon=zoom_in')
+            with ui.fab(icon='text_fields', color='teal', direction='up').props('label=Font Size'):
+                ui.fab_action('Small', on_click=lambda: self.set_font_size('small')).props('icon=text_decrease label="Small"')
+                ui.fab_action('Medium', on_click=lambda: self.set_font_size('medium')).props('icon=text_fields label="Medium"')
+                ui.fab_action('Large', on_click=lambda: self.set_font_size('large')).props('icon=text_increase label="Large"')
+                ui.fab_action('Extra Large', on_click=lambda: self.set_font_size('extra-large')).props('icon=zoom_in label="Extra Large"')
 
-                    # Contrast submenu
-                    with ui.menu_item('Contrast', auto_close=False).props('icon=contrast'):
-                        with ui.item_section().props('side'):
-                            ui.icon('keyboard_arrow_left')
-                        with ui.menu().props('anchor="top end" self="top start" auto-close'):
-                            ui.menu_item('Normal Contrast', on_click=lambda: self.set_contrast_mode('normal')).props('icon=visibility')
-                            ui.menu_item('High Contrast', on_click=lambda: self.set_contrast_mode('high')).props('icon=contrast')
+            with ui.fab(icon='contrast', color='orange', direction='up').props('label=Contrast'):
+                ui.fab_action('Normal Contrast', on_click=lambda: self.set_contrast_mode('normal')).props('icon=contrast label="Normal"')
+                ui.fab_action('High Contrast', on_click=lambda: self.set_contrast_mode('high')).props('icon=invert_colors label="High"')
 
-                    # Motion submenu
-                    with ui.menu_item('Motion', auto_close=False).props('icon=motion_photos_on'):
-                        with ui.item_section().props('side'):
-                            ui.icon('keyboard_arrow_left')
-                        with ui.menu().props('anchor="top end" self="top start" auto-close'):
-                            ui.menu_item('Normal Motion', on_click=lambda: self.set_motion_mode('normal')).props('icon=motion_photos_on')
-                            ui.menu_item('Reduced Motion', on_click=lambda: self.set_motion_mode('reduced')).props('icon=motion_photos_off')
-
-                    ui.separator()
-                    ui.menu_item('Reset All', on_click=self.reset_accessibility).props('icon=refresh')
+            with ui.fab(icon='motion_photos_off', color='red', direction='up').props('label=Motion'):
+                ui.fab_action('Normal Motion', on_click=lambda: self.set_motion_mode('normal')).props('icon=motion_photos_on label="Normal"')
+                ui.fab_action('Reduced Motion', on_click=lambda: self.set_motion_mode('reduced')).props('icon=motion_photos_off label="Reduced"')
+            ui.fab_action('Reset All Settings', on_click=self.reset_accessibility).props('icon=refresh label="Reset"')
 
 
     def set_font_size(self, size: str):
