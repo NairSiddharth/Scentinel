@@ -5,6 +5,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
+import asyncio
+import threading
 
 class CologneRecommender:
     def __init__(self):
@@ -14,7 +16,29 @@ class CologneRecommender:
         self.wear_patterns = None
         
     def build_features(self, colognes: List[Any], wear_history: List[Any]) -> None:
-        """Build feature matrices for recommendations"""
+        """Build feature matrices for recommendations (sync wrapper)"""
+        if not colognes:
+            return
+
+        # For large datasets, run async
+        if len(colognes) > 100 or len(wear_history) > 1000:
+            # Run in background thread to avoid blocking UI
+            threading.Thread(target=self._async_build_features, args=(colognes, wear_history), daemon=True).start()
+        else:
+            # Small datasets can run synchronously
+            self._build_features_sync(colognes, wear_history)
+
+    def _async_build_features(self, colognes: List[Any], wear_history: List[Any]) -> None:
+        """Build features asynchronously for large datasets"""
+        try:
+            print(f"🧠 Building recommender features for {len(colognes)} colognes and {len(wear_history)} wear entries...")
+            self._build_features_sync(colognes, wear_history)
+            print("✅ Recommender features built successfully!")
+        except Exception as e:
+            print(f"❌ Error building recommender features: {e}")
+
+    def _build_features_sync(self, colognes: List[Any], wear_history: List[Any]) -> None:
+        """Build feature matrices for recommendations (actual implementation)"""
         if not colognes:
             return
             

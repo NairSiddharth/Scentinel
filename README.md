@@ -45,25 +45,22 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
 
 ## 📝 TODO
 
-1. **Center the navbar**
-2. **Center the settings buttons**
-3. **Make the footer stretch across the full app**
-4. **Add a "floating menu" in the bottom right corner** (dark mode toggle + other similar features)
-5. **Move Wear Frequency Insights to the top of its section in Analytics**
-6. **Stretch empty table in collection container**
-7. **Generate test data**
+1. ~~**Center the navbar**~~
+2. ~~**Center the settings buttons**~~
+3. ~~**Make the footer stretch across the full app**~~
+4. ~~**Add a "floating menu" in the bottom right corner** (dark mode toggle + other similar features)~~
+5. ~~**Move Wear Frequency Insights to the top of its section in Analytics**~~
+6. ~~**Stretch empty table in collection container**~~
+7. ~~**Generate test data**~~
 8. **Finish actual data**
 9. **Create executable**
-10. **Update README installation instructions** - Fix references to `app.py` (should be `src/scentinel/main.py`)
-11. **Add error handling for missing image directory** - Graceful fallback when `data/images/cologne.png` is missing
-12. **Configuration file support** - Add config file for port, database path, and other settings
-13. **Input validation** - Sanitize and validate all user inputs for security
-14. **Loading states/spinners** - Add loading indicators for analytics refresh and data operations
-15. **Confirm dialogs for destructive actions** - Add confirmation for data import/export operations
-16. **Bulk operations** - Allow selecting multiple colognes for batch actions
-17. **Advanced search filters** - Add filters by rating, last worn date, notes, etc.
-18. **Usage recommendations widget** - Show "You haven't worn X in Y days" notifications
-19. **Performance optimization** - Optimize for large collections (1000+ fragrances)
+10. ~~**Input validation** - Sanitize and validate all user inputs for security~~
+11. **Loading states/spinners** - Add loading indicators for analytics refresh and data operations
+12. ~~**Confirm dialogs for destructive actions** - Add confirmation for data import/export operations~~
+13. **Bulk operations** - Allow selecting multiple colognes for batch actions
+14. **Advanced search filters** - Add filters by rating, last worn date, notes, etc.
+15. ~~**Usage recommendations widget** - Show "You haven't worn X in Y days" notifications~~
+16. **Performance optimization** - Optimize for large collections (1000+ fragrances)
 
 ---
 

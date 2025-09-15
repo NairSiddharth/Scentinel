@@ -112,15 +112,16 @@ class CollectionTab(BaseTab):
 
             if not colognes:
                 with self.cologne_table_container:
-                    ui.label('No colognes found. Add some to get started!').classes(
-                        'text-gray-500 dark:text-gray-400 text-center p-8'
-                    )
-                    ui.button('Add Your First Cologne',
-                              on_click=self.show_add_cologne_dialog,
-                              icon='add').classes(
-                        'bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 '
-                        'rounded-lg shadow-md hover:shadow-lg smooth-transition hover-lift mx-auto'
-                    )
+                    with ui.column().classes('items-center w-full py-12 px-8'):
+                        ui.label('No colognes found. Add some to get started!').classes(
+                            'text-gray-500 dark:text-gray-400 text-center mb-6'
+                        )
+                        ui.button('Add Your First Cologne',
+                                  on_click=self.show_add_cologne_dialog,
+                                  icon='add').classes(
+                            'bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 '
+                            'rounded-lg shadow-md hover:shadow-lg smooth-transition hover-lift'
+                        )
                 return
 
             # Prepare data for ag-grid
@@ -244,19 +245,6 @@ class CollectionTab(BaseTab):
         else:
             ui.notify('Please select a cologne first', type='warning')
 
-    def refresh_cologne_image(self, cologne):
-        """Refresh image for a specific cologne"""
-        try:
-            cologne_id = getattr(cologne, 'id', None)
-            if cologne_id:
-                success = self.db.refresh_cologne_image(cologne_id)
-                if success:
-                    ui.notify(f'Image updated for {getattr(cologne, "name", "cologne")}', type='positive')
-                    self.refresh_cologne_table()  # Refresh the display
-                else:
-                    ui.notify('Could not fetch image', type='warning')
-        except Exception as e:
-            ui.notify(f'Error updating image: {str(e)}', type='negative')
 
     def show_add_cologne_dialog(self):
         """Show dialog to add a new cologne"""
@@ -433,23 +421,24 @@ class CollectionTab(BaseTab):
                             'dark:border-gray-600 hover:shadow-md smooth-transition hover-lift'
                         ):
                             with ui.card_section().classes('p-3'):
-                                name_val = getattr(cologne, 'name', None)
-                                brand_val = getattr(cologne, 'brand', None)
-                                ui.label(str(name_val) if name_val else '').classes('font-semibold text-gray-800 dark:text-gray-200')
-                                ui.label(f"by {brand_val}" if brand_val else '').classes('text-sm text-gray-600 dark:text-gray-400')
-                                with ui.row().classes('w-full justify-between items-center mt-2'):
-                                    season_val = getattr(wear, 'season', '')
-                                    occasion_val = getattr(wear, 'occasion', '')
-                                    ui.label(f"{str(season_val).title()}, {str(occasion_val).title()}").classes(
-                                        'text-xs text-gray-500 dark:text-gray-500'
-                                    )
-                                    rating_val = getattr(wear, 'rating', None)
-                                    if rating_val is not None:
-                                        try:
-                                            stars = int(float(rating_val))
-                                            ui.label('★' * stars).classes('text-yellow-500')
-                                        except Exception:
-                                            pass
+                                with ui.column().classes('w-full'):
+                                        name_val = getattr(cologne, 'name', None)
+                                        brand_val = getattr(cologne, 'brand', None)
+                                        ui.label(str(name_val) if name_val else '').classes('font-semibold text-gray-800 dark:text-gray-200')
+                                        ui.label(f"by {brand_val}" if brand_val else '').classes('text-sm text-gray-600 dark:text-gray-400')
+                                        with ui.row().classes('w-full justify-between items-center mt-1'):
+                                            season_val = getattr(wear, 'season', '')
+                                            occasion_val = getattr(wear, 'occasion', '')
+                                            ui.label(f"{str(season_val).title()}, {str(occasion_val).title()}").classes(
+                                                'text-xs text-gray-500 dark:text-gray-500'
+                                            )
+                                            rating_val = getattr(wear, 'rating', None)
+                                            if rating_val is not None:
+                                                try:
+                                                    stars = int(float(rating_val))
+                                                    ui.label('★' * stars).classes('text-yellow-500 text-sm')
+                                                except Exception:
+                                                    pass
 
         except Exception as e:
             with self.recent_wears_container:

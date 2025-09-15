@@ -11,9 +11,8 @@ from typing import List, Optional, Any, Dict
 class ScentinelApp:
     def navigate_to_tab(self, tab_name: str):
         """Navigate to a specific tab and ensure content is shown"""
-        ui.run_javascript(f'window.location.hash = "{tab_name}";')
-        if self.hidden_tabs:
-            self.hidden_tabs.value = tab_name
+        if self.main_tabs:
+            self.main_tabs.value = tab_name
             self.on_tab_change(tab_name)
 
     def show_add_cologne_dialog(self, *args, **kwargs):
@@ -173,37 +172,11 @@ class ScentinelApp:
             }
         </style>
         ''')
-        # Set up dark mode and tab restore logic
+        # Set up dark mode for native app
         ui.add_head_html('''
         <script>
         document.addEventListener("DOMContentLoaded", function() {
             document.body.className = "light-mode";
-            // Hybrid tab restore: open last tab or default to home
-            let lastTab = localStorage.getItem('scentinel_last_tab');
-            let hash = window.location.hash.replace('#', '');
-
-            // If no hash in URL, restore from localStorage or default to home
-            if (!hash || hash === '') {
-                if (lastTab && lastTab !== '' && lastTab !== 'home') {
-                    // Returning user - restore their last tab
-                    window.location.hash = lastTab;
-                } else {
-                    // First time visitor or returning to home - default to home
-                    localStorage.setItem('scentinel_last_tab', 'home');
-                    window.location.hash = '';
-                    // Ensure home tab is visible
-                    setTimeout(() => {
-                        const homeTab = document.querySelector('[data-tab="home"]');
-                        if (homeTab) homeTab.click();
-                    }, 100);
-                }
-            }
-        });
-        // Save tab on hash change
-        window.addEventListener('hashchange', function() {
-            let tab = window.location.hash.replace('#', '');
-            // Save tab to localStorage (empty hash = home)
-            localStorage.setItem('scentinel_last_tab', tab || 'home');
         });
         </script>
         ''')
@@ -243,20 +216,19 @@ class ScentinelApp:
                     ui.item('Export Data', on_click=lambda: self.settings_tab.export_collection()).props('icon=download')
                     ui.item('Import Data', on_click=lambda: self.settings_tab.show_import_dialog()).props('icon=upload')
 
-        # Hidden tabs for routing
-        with ui.element('div').classes('hidden'):
-            def home_alias_mapper(x):
-                val = x.split('#')[-1]
-                if val in ('', 'home'):
-                    return 'home'
-                return val
-            with ui.tabs().bind_value_from(ui.context.client, 'url_hash', home_alias_mapper) as tabs:
-                self.hidden_tabs = tabs
-                tabs.value = 'home'  # Set initial value to home
-            tabs.on_value_change(self.on_tab_change)
+        # Simple tab system for native app
+        self.main_tabs = ui.tabs().classes('hidden')  # Hidden but functional
+        with self.main_tabs:
+            ui.tab('home', label='Home')
+            ui.tab('collection', label='Collection')
+            ui.tab('analytics', label='Analytics')
+            ui.tab('settings', label='Settings')
+
+        self.main_tabs.value = 'home'  # Start on home
+        self.main_tabs.on_value_change(self.on_tab_change)
 
         # Main tab panels
-        self.main_container = ui.tab_panels(self.hidden_tabs).classes('w-full min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 smooth-transition main-tab-container')
+        self.main_container = ui.tab_panels(self.main_tabs, value='home').classes('w-full min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 smooth-transition main-tab-container')
         with self.main_container:
             with ui.tab_panel('home').classes('p-0'):
                 self.welcome_tab.setup_tab_content()
@@ -274,12 +246,9 @@ class ScentinelApp:
         self.setup_accessibility_menu()
 
     def navigate_to_home(self):
-        """Navigate to home/welcome page (now a tab panel)"""
-        # Clear localStorage and remove hash for clean home state
-        ui.run_javascript('localStorage.setItem("scentinel_last_tab", "home");')
-        ui.run_javascript('history.replaceState(null, null, window.location.pathname + window.location.search);')
-        if self.hidden_tabs:
-            self.hidden_tabs.value = 'home'
+        """Navigate to home/welcome page"""
+        if self.main_tabs:
+            self.main_tabs.value = 'home'
             self.on_tab_change('home')
 
     def on_tab_change(self, event):
@@ -308,18 +277,20 @@ class ScentinelApp:
 
     def setup_footer(self):
         """Setup footer with gradient styling, full width, and useful app info/actions."""
-        APP_VERSION = "v1.0.0"  # Update as needed or load dynamically
+        APP_VERSION = "v2.0.0"  # Update as needed or load dynamically
         self.footer_container = ui.element('footer').classes(
             'footer-gradient-light smooth-transition w-full fixed bottom-0 left-0 right-0 py-4 px-6 z-50'
         )
         with self.footer_container:
             with ui.row().classes('max-w-7xl mx-auto w-full items-center justify-between'):
-                # Left: Logo, app name, version, privacy
-                with ui.row().classes('items-center gap-3'):
-                    ui.image('data/images/cologne.png').classes('w-4 h-4 opacity-90')
-                    ui.label('Scentinel').classes('text-white text-base font-semibold opacity-90')
-                    ui.label(APP_VERSION).classes('text-white text-xs opacity-60 ml-2')
-                    ui.label('• All data stored locally').classes('text-white text-xs opacity-60 ml-2')
+                # Left: Logo, app name, version, privacy, and credits
+                with ui.column().classes('items-start gap-1'):
+                    with ui.row().classes('items-center gap-3'):
+                        ui.image('data/images/cologne.png').classes('w-4 h-4 opacity-90')
+                        ui.label('Scentinel').classes('text-white text-base font-semibold opacity-90')
+                        ui.label(APP_VERSION).classes('text-white text-xs opacity-60 ml-2')
+                        ui.label('• All data stored locally').classes('text-white text-xs opacity-60 ml-2')
+                    ui.label('Created by Siddharth Nair').classes('text-white text-xs opacity-75')
                 # Center: Quick actions
                 with ui.row().classes('gap-3'):
                     ui.button('Export Data', on_click=lambda: self.settings_tab.export_collection()).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')

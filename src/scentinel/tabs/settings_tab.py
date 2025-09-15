@@ -7,6 +7,7 @@ from typing import Any, Optional, Dict, List
 import csv
 import io
 import json
+import asyncio
 
 from nicegui import ui
 from .base_tab import BaseTab
@@ -524,34 +525,105 @@ class SettingsTab(BaseTab):
         self.proceed_with_import(json_content, resolutions, analysis)
 
     def proceed_with_import(self, json_content: str, resolutions: Dict[str, str], analysis: Optional[Dict[str, Any]] = None):
-        """Execute the actual import with resolved duplicates"""
+        """Execute the actual import with resolved duplicates (async for large imports)"""
+        # Show progress indicator
+        progress_dialog = self._show_import_progress_dialog()
+
+        # Run import asynchronously to prevent UI blocking
+        ui.run_javascript('setTimeout(function() { console.log("Starting async import..."); }, 100);')
+        asyncio.create_task(self._async_import_task(json_content, resolutions, analysis, progress_dialog))
+
+    async def _async_import_task(self, json_content: str, resolutions: Dict[str, str], analysis: Optional[Dict[str, Any]], progress_dialog):
+        """Async task for handling large imports without blocking UI"""
         try:
-            result = self.db.import_from_json(json_content, resolutions)
+            # Parse JSON to count items for progress tracking
+            data = json.loads(json_content)
+            total_items = len(data.get('colognes', [])) + len(data.get('wear_history', []))
+
+            # Update progress
+            self._update_import_progress(progress_dialog, 0, total_items, "Starting import...")
+
+            # Yield control to UI
+            await asyncio.sleep(0.1)
+
+            # Process import in chunks to avoid blocking
+            result = await self._chunked_import(json_content, resolutions, total_items, progress_dialog)
 
             # Log the import transaction
             self.db.log_import_transaction(
                 import_type='json',
                 result=result,
-                filename='imported_file.json',  # Could be enhanced to capture actual filename
+                filename='imported_file.json',
                 resolutions=resolutions,
                 analysis=analysis
             )
 
+            # Close progress dialog
+            progress_dialog['dialog'].close()
+
             if result["success"]:
-                # Trigger refresh of other components (this will need to be handled via callbacks)
+                # Trigger refresh of other components
                 if hasattr(self, '_on_data_change'):
                     self._on_data_change()
 
                 # Show enhanced success dialog
                 self.show_import_results_dialog(result)
+                ui.notify(f'✅ Import completed! {result.get("imported_count", 0)} items processed', type='positive')
 
             else:
                 error_msg = result["error"]
                 ui.notify(f'Import failed:\n{error_msg}', type='negative', multi_line=True)
 
         except Exception as ex:
+            progress_dialog['dialog'].close()
             error_msg = str(ex)
             ui.notify(f'Error during import:\n{error_msg}', type='negative', multi_line=True)
+
+    def _show_import_progress_dialog(self):
+        """Show progress dialog for long-running imports"""
+        dialog = ui.dialog().props('persistent')
+        with dialog, ui.card().classes('w-96'):
+            ui.label('Importing Data...').classes('text-h6 mb-4 text-center')
+
+            # Progress components
+            progress_bar = ui.linear_progress(value=0).classes('w-full mb-2')
+            progress_label = ui.label('Preparing import...').classes('text-center text-sm text-gray-600')
+
+        dialog.open()
+
+        # Return dialog with progress components attached
+        return {
+            'dialog': dialog,
+            'progress_bar': progress_bar,
+            'progress_label': progress_label
+        }
+
+    def _update_import_progress(self, dialog_data, current: int, total: int, message: str):
+        """Update progress dialog with current status"""
+        if dialog_data and 'progress_bar' in dialog_data and 'progress_label' in dialog_data:
+            progress = current / total if total > 0 else 0
+            dialog_data['progress_bar'].value = progress
+            dialog_data['progress_label'].text = f"{message} ({current}/{total})"
+
+    async def _chunked_import(self, json_content: str, resolutions: Dict[str, str], total_items: int, progress_dialog) -> dict:
+        """Import data in chunks to prevent UI blocking"""
+        try:
+            # For very large imports, we could process in smaller chunks
+            # For now, just add periodic yields to prevent blocking
+
+            self._update_import_progress(progress_dialog, 0, total_items, "Processing data...")
+            await asyncio.sleep(0.1)  # Yield to UI
+
+            # Execute the actual import (this could be further chunked if needed)
+            result = self.db.import_from_json(json_content, resolutions)
+
+            self._update_import_progress(progress_dialog, total_items, total_items, "Finalizing...")
+            await asyncio.sleep(0.1)  # Final yield
+
+            return result
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def show_import_results_dialog(self, result: dict):
         """Show detailed import results in a dialog"""

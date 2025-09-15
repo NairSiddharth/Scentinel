@@ -1,0 +1,12 @@
+#!/bin/bash
+# Git pre-commit hook for automatic versioning
+
+echo "🔄 Auto-versioning based on staged changes..."
+
+# Run the version manager
+python scripts/version_manager.py --auto --since HEAD
+
+# Add the updated files back to the commit
+git add data/version.json src/scentinel/main.py 2>/dev/null || true
+
+echo "✅ Versioning complete!"
