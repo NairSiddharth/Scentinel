@@ -53,17 +53,15 @@ class WelcomeTab:
                             'Start Your Fragrance Journey',
                             on_click=lambda: self.app.navigate_to_tab('collection')
                         ).classes(
-                            'bg-white text-purple-600 hover:bg-gray-100 font-semibold px-8 py-4 '
-                            'rounded-xl shadow-xl hover:shadow-2xl smooth-transition hover-lift text-lg'
-                        )
+                            'text-white font-semibold px-8 py-4 rounded-xl smooth-transition hover-lift text-lg'
+                        ).style('border: 2px solid white; background: transparent;')
 
                         ui.button(
                             'Import Collection',
                             on_click=lambda: self.app.navigate_to_tab('settings')
                         ).classes(
-                            'border-2 border-white text-white hover:bg-white hover:text-purple-600 '
-                            'font-semibold px-8 py-4 rounded-xl smooth-transition hover-lift text-lg'
-                        ).props('outline')
+                            'text-white font-semibold px-8 py-4 rounded-xl smooth-transition hover-lift text-lg'
+                        ).style('border: 2px solid white; background: transparent;')
 
             # Stats bar with responsive grid
             with ui.element('section').classes(

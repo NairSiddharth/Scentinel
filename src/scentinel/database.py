@@ -7,6 +7,7 @@ import json
 from collections import Counter
 from sqlalchemy import func, extract
 from .recommender import CologneRecommender
+from .photo_api import PhotoAPI
 
 Base = declarative_base()
 
@@ -27,11 +28,13 @@ cologne_classifications = Table(
 
 class Cologne(Base):
     __tablename__ = 'colognes'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     brand = Column(String, nullable=False)
-    
+    image_path = Column(String, nullable=True)  # Local image file path
+    image_source = Column(String, nullable=True)  # online, placeholder, user_upload
+
     # Relationships
     wear_history = relationship("WearHistory", back_populates="cologne")
     notes = relationship("FragranceNote", secondary=cologne_notes, back_populates="colognes")
@@ -98,17 +101,25 @@ class ImportHistory(Base):
     notes = Column(String)
 
 class Database:
-    def __init__(self, db_name: str = "data/scentinel.db"):
+    def __init__(self, db_name: str | None = None):
+        import os
+        if db_name is None:
+            # Always resolve path from project root
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            db_name = os.path.join(base_dir, 'data', 'scentinel.db')
+        else:
+            db_name = os.path.abspath(db_name)
         self.engine = create_engine(f'sqlite:///{db_name}')
         Base.metadata.create_all(self.engine)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         self.recommender = CologneRecommender()
+        self.photo_api = PhotoAPI()
         self._rebuild_recommender()
 
-    def add_cologne(self, name: str, brand: str, notes: Optional[List[str]] = None, classifications: Optional[List[str]] = None) -> Cologne:
+    def add_cologne(self, name: str, brand: str, notes: Optional[List[str]] = None, classifications: Optional[List[str]] = None, fetch_image: bool = True) -> Cologne:
         cologne = Cologne(name=name, brand=brand)
-        
+
         # Add notes if provided
         if notes:
             for note_name in notes:
@@ -117,8 +128,8 @@ class Database:
                     note = FragranceNote(name=note_name)
                     self.session.add(note)
                 cologne.notes.append(note)
-        
-        # Add classifications if provided  
+
+        # Add classifications if provided
         if classifications:
             for class_name in classifications:
                 classification = self.session.query(ScentClassification).filter_by(name=class_name).first()
@@ -126,6 +137,10 @@ class Database:
                     classification = ScentClassification(name=class_name)
                     self.session.add(classification)
                 cologne.classifications.append(classification)
+
+        # Fetch image if requested
+        if fetch_image:
+            self._fetch_cologne_image(cologne)
         
         self.session.add(cologne)
         self.session.commit()
@@ -239,6 +254,56 @@ class Database:
         
         return explanations
     
+    def _fetch_cologne_image(self, cologne: Cologne) -> bool:
+        """Fetch and store image for a cologne"""
+        try:
+            # Use getattr to get actual values from the instance
+            cologne_name = str(getattr(cologne, 'name', '')) or ""
+            cologne_brand = str(getattr(cologne, 'brand', '')) or ""
+
+            success, result = self.photo_api.get_cologne_image(cologne_name, cologne_brand)
+            if success:
+                setattr(cologne, 'image_path', result)
+                setattr(cologne, 'image_source', "online" if "placeholder" not in result else "placeholder")
+                return True
+            else:
+                print(f"Failed to fetch image for {cologne_name}: {result}")
+                return False
+        except Exception as e:
+            print(f"Error fetching image for {getattr(cologne, 'name', '')}: {e}")
+            return False
+
+    def get_cologne_image_path(self, cologne_id: int) -> Optional[str]:
+        """Get the local image path for a cologne"""
+        cologne = self.session.query(Cologne).get(cologne_id)
+        return cologne.image_path if cologne and cologne.image_path else None
+
+    def refresh_cologne_image(self, cologne_id: int) -> bool:
+        """Force refresh image for a specific cologne"""
+        cologne = self.session.query(Cologne).get(cologne_id)
+        if not cologne:
+            return False
+
+        try:
+            success, result = self.photo_api.get_cologne_image(cologne.name, cologne.brand, force_refresh=True)
+            if success:
+                cologne.image_path = result
+                cologne.image_source = "online" if not result.endswith("placeholder") else "placeholder"
+                self.session.commit()
+                return True
+            return False
+        except Exception as e:
+            print(f"Error refreshing image for {cologne.name}: {e}")
+            return False
+
+    def get_photo_stats(self) -> Dict[str, Any]:
+        """Get photo collection statistics"""
+        return self.photo_api.get_storage_stats()
+
+    def cleanup_old_images(self, days_old: int = 90) -> int:
+        """Clean up old cached images"""
+        return self.photo_api.cleanup_old_images(days_old)
+
     def _rebuild_recommender(self):
         """Rebuild the recommender with current data"""
         colognes = self.get_colognes()

@@ -1,20 +1,31 @@
-# 📋 Scentinel JSON Template Guide
+# 🚀 Scentinel Quick Start Guide
 
-This guide explains how to use the provided JSON templates to quickly populate your Scentinel fragrance collection.
+This folder contains everything you need to get started with Scentinel quickly! Choose between JSON (full-featured) or CSV (basic data) import methods.
 
-## 🎯 Available Templates
+## 📂 Available Files
 
-### 1. `cologne_template_50.json`
+### JSON Import (Recommended - Full Features)
 
-- **Purpose**: Empty template with 50 cologne slots
-- **Use Case**: Start from scratch and fill in your entire collection
-- **Best For**: Users with large collections who want to bulk-import data
+- **`cologne_example_template.json`**: Example template with 5 filled examples + 5 empty slots
+- **`cologne_template_50.json`**: Empty template with 50 cologne slots
 
-### 2. `cologne_example_template.json`
+### CSV Import (Basic Data Only)
 
-- **Purpose**: Example template with 5 filled examples + 5 empty slots
-- **Use Case**: Learn the format and see real examples
-- **Best For**: First-time users who want to understand the data structure
+- **`template.csv`**: Empty CSV template with proper headers
+- **`sample_collection.csv`**: Example CSV with 6 popular fragrances
+
+## 🎯 Import Methods Comparison
+
+| Feature | JSON Import | CSV Import |
+|---------|-------------|------------|
+| **Cologne Data** | ✅ Full details | ✅ Basic info only |
+| **Wear History** | ✅ Complete tracking | ❌ Not supported |
+| **Ratings** | ✅ Individual wear ratings | ❌ Not supported |
+| **Seasons/Occasions** | ✅ Detailed tracking | ❌ Not supported |
+| **Duplicate Resolution** | ✅ Smart handling | ❌ Basic only |
+| **Best For** | Complete collections | Quick bulk additions |
+
+## 📋 JSON Templates
 
 ## 📝 How to Fill Out Templates
 
@@ -68,6 +79,35 @@ This guide explains how to use the provided JSON templates to quickly populate y
    - Go to Settings tab
    - Click "Import Collection"
    - Upload your filled JSON file
+
+## 📊 CSV Import Guide
+
+### Quick CSV Import
+
+1. **Start with Template**:
+   - Use `template.csv` for headers: `name,brand,notes,classifications`
+   - Or modify `sample_collection.csv` with your own fragrances
+
+2. **CSV Format Rules**:
+   ```csv
+   name,brand,notes,classifications
+   Sauvage,Dior,bergamot;pepper;ambroxan,fresh;masculine;designer
+   ```
+   - **Semicolons** separate multiple notes/classifications
+   - **No spaces** around semicolons
+   - **Required**: name and brand columns
+   - **Optional**: notes and classifications columns
+
+3. **Import to Scentinel**:
+   - Open Scentinel app
+   - Go to Settings tab
+   - Drag and drop your CSV file to the CSV Import area
+
+### CSV Limitations
+- ❌ No wear history import
+- ❌ No ratings
+- ❌ Limited duplicate handling
+- ✅ Quick way to add basic cologne info
 
 ## 💡 Pro Tips
 

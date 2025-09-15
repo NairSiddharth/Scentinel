@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from nicegui import ui
-from .database import Database, Cologne, WearHistory
-from .tabs.settings_tab import SettingsTab
-from .tabs.collection_tab import CollectionTab
-from .tabs.analytics_tab import AnalyticsTab
-from .tabs.welcome_tab import WelcomeTab
+from scentinel.database import Database, Cologne, WearHistory
+from scentinel.tabs.settings_tab import SettingsTab
+from scentinel.tabs.collection_tab import CollectionTab
+from scentinel.tabs.analytics_tab import AnalyticsTab
+from scentinel.tabs.welcome_tab import WelcomeTab
 from datetime import datetime, timedelta
 from typing import List, Optional, Any, Dict
 
@@ -94,27 +94,34 @@ class ScentinelApp:
                 --footer-dark: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
             }
             .nav-active {
-                background: rgba(255, 255, 255, 0.25) !important;
-                color: white !important;
+                background: #ffffff40 !important;
+                color: #ffffff !important;
                 font-weight: 600 !important;
+                border: 1px solid #ffffff60 !important;
+            }
+            .nav-inactive {
+                background: transparent !important;
+                color: #ffffffb3 !important;
+                border: 1px solid transparent !important;
             }
             .nav-inactive:hover {
-                background: rgba(255,255,255,0.10) !important;
-                color: white !important;
+                background: #ffffff20 !important;
+                color: #ffffff !important;
+                border: 1px solid #ffffff40 !important;
             }
             .header-gradient-light { background: var(--header-light); }
             .header-gradient-dark { background: var(--header-dark); }
             .footer-gradient-light { background: var(--footer-light); }
             .footer-gradient-dark { background: var(--footer-dark); }
             .glass-card {
-                backdrop-filter: blur(10px);
-                background: rgba(255, 255, 255, 0.8);
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: #ffffffcc;
+                border: 1px solid #ffffff33;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             .glass-card-dark {
-                backdrop-filter: blur(10px);
-                background: rgba(31, 41, 55, 0.8);
-                border: 1px solid rgba(75, 85, 99, 0.3);
+                background: #1f2937cc;
+                border: 1px solid #4b556350;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             }
             .smooth-transition {
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -144,6 +151,13 @@ class ScentinelApp:
                 animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
             }
+            .footer-btn {
+                background: #ffffff20 !important;
+                transition: background 0.2s ease;
+            }
+            .footer-btn:hover {
+                background: #ffffff30 !important;
+            }
             .accessibility-menu {
                 position: fixed;
                 bottom: 80px; /* Above footer height + padding */
@@ -163,17 +177,18 @@ class ScentinelApp:
 
             // If no hash in URL, restore from localStorage or default to home
             if (!hash || hash === '') {
-                if (lastTab && lastTab !== '') {
-                    if (lastTab === 'home') {
-                        // Stay on clean URL for home
-                        window.location.hash = '';
-                    } else {
-                        window.location.hash = lastTab;
-                    }
+                if (lastTab && lastTab !== '' && lastTab !== 'home') {
+                    // Returning user - restore their last tab
+                    window.location.hash = lastTab;
                 } else {
-                    // First time visitor - default to home
+                    // First time visitor or returning to home - default to home
                     localStorage.setItem('scentinel_last_tab', 'home');
                     window.location.hash = '';
+                    // Ensure home tab is visible
+                    setTimeout(() => {
+                        const homeTab = document.querySelector('[data-tab="home"]');
+                        if (homeTab) homeTab.click();
+                    }, 100);
                 }
             }
         });
@@ -209,13 +224,12 @@ class ScentinelApp:
                                 ui.icon(tab_icon).classes('text-xl')
                                 ui.label(tab_name).classes('font-medium')
                         self.nav_buttons[tab_id] = btn
-                        btn.classes('text-white/70 px-4 py-2 rounded-lg smooth-transition nav-inactive')
+                        btn.classes('px-4 py-2 rounded-lg smooth-transition nav-inactive')
 
                 # Right: Quick Actions Menu
                 with ui.button(icon='add', on_click=lambda: None).classes(
-                    'bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-medium px-4 py-2 '
-                    'rounded-lg backdrop-blur-sm border border-white border-opacity-30 smooth-transition hover-lift'
-                ).props('flat'):
+                    'text-white font-medium px-4 py-2 rounded-lg smooth-transition hover-lift'
+                ).style('background: #ffffff30; border: 1px solid #ffffff50;').props('flat'):
                     ui.label('Quick Actions').classes('ml-2')
                     with ui.menu().props('auto-close'):
                         ui.menu_item('Add Cologne', on_click=self.show_add_cologne_dialog).props('icon=add')
@@ -233,6 +247,7 @@ class ScentinelApp:
                 return val
             with ui.tabs().bind_value_from(ui.context.client, 'url_hash', home_alias_mapper) as tabs:
                 self.hidden_tabs = tabs
+                tabs.value = 'home'  # Set initial value to home
             tabs.on_value_change(self.on_tab_change)
 
         # Main tab panels
@@ -302,12 +317,12 @@ class ScentinelApp:
                     ui.label('• All data stored locally').classes('text-white text-xs opacity-60 ml-2')
                 # Center: Quick actions
                 with ui.row().classes('gap-3'):
-                    ui.button('Export Data', on_click=lambda: self.settings_tab.export_collection()).props('flat').classes('text-white text-xs bg-white/10 hover:bg-white/20 rounded-md px-3 py-1')
-                    ui.button('Import Data', on_click=lambda: self.settings_tab.show_import_dialog()).props('flat').classes('text-white text-xs bg-white/10 hover:bg-white/20 rounded-md px-3 py-1')
+                    ui.button('Export Data', on_click=lambda: self.settings_tab.export_collection()).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
+                    ui.button('Import Data', on_click=lambda: self.settings_tab.show_import_dialog()).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
                 # Right: Help, feedback, credits
                 with ui.row().classes('items-center gap-2'):
-                    ui.button('Help', on_click=lambda: self.navigate_to_tab('settings')).props('flat').classes('text-white text-xs bg-white/10 hover:bg-white/20 rounded-md px-3 py-1')
-                    ui.button('Send Feedback', on_click=lambda: ui.notify('Send feedback to: your@email.com')).props('flat').classes('text-white text-xs bg-white/10 hover:bg-white/20 rounded-md px-3 py-1')
+                    ui.button('Help', on_click=lambda: self.navigate_to_tab('settings')).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
+                    ui.button('Send Feedback', on_click=lambda: ui.notify('Send feedback to: your@email.com')).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
                     ui.label('Made with ❤️ using NiceGUI').classes('text-white text-xs opacity-75 ml-2')
 
     def setup_accessibility_menu(self):
@@ -410,7 +425,7 @@ class ScentinelApp:
 def main():
     app_instance = ScentinelApp()
     app_instance.setup_ui()
-    ui.run(title='Scentinel', port=8080, reload=True)
+    ui.run(title='Scentinel', reload=False, native=True, favicon='data/images/cologne.png', show_welcome_message=False, window_size=(1200, 800)) 
 
 if __name__ in {"__main__", "__mp_main__"}:
     main()

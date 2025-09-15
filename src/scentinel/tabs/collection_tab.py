@@ -2,6 +2,7 @@
 """
 CollectionTab class for managing cologne collection and wear logging.
 """
+import os
 from datetime import datetime
 from typing import Any, Optional
 from nicegui import ui
@@ -17,9 +18,11 @@ class CollectionTab(BaseTab):
         self.settings_tab = settings_tab
         self.cologne_table_container = None
         self.recent_wears_container = None
+        self.recent_recommendations = []  # Track last 3 recommendations
         self.recommendation_card = None
         self.search_input = None
         self.data_change_callback = None
+        self.selected_cologne_id = None  # Track selected cologne in grid
 
     def set_data_change_callback(self, callback):
         """Set callback for when collection data changes"""
@@ -43,13 +46,6 @@ class CollectionTab(BaseTab):
                         'placeholder-gray-500 dark:placeholder-gray-400 smooth-transition'
                     )
 
-                    # CSV upload uses settings_tab if available
-                    if self.settings_tab:
-                        ui.upload(on_upload=self.settings_tab.handle_csv_upload, multiple=False).props('flat accept=".csv"').classes(
-                            'mb-4 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 '
-                            'rounded-lg px-4 py-2 text-blue-700 dark:text-blue-300 hover:bg-blue-100 '
-                            'dark:hover:bg-blue-800 smooth-transition'
-                        ).tooltip('Upload CSV with columns: name, brand, notes (semicolon separated), classifications (semicolon separated)')
 
                     self.cologne_table_container = ui.column().classes(
                         'w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg border '
@@ -83,7 +79,7 @@ class CollectionTab(BaseTab):
                                 ui.button('Regenerate', on_click=self.refresh_recommendation).classes(
                                     'bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 '
                                     'rounded-lg shadow-md hover:shadow-lg smooth-transition hover-lift'
-                                ).props('size=sm')
+                                ).props('size=sm').tooltip('Get a new recommendation (requires wear history data)')
                                 ui.button('Custom', on_click=self.show_custom_recommendation_dialog).classes(
                                     'border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 '
                                     'font-medium px-4 py-2 rounded-lg smooth-transition hover-lift'
@@ -92,7 +88,7 @@ class CollectionTab(BaseTab):
                             self.refresh_recommendation()
 
     def refresh_cologne_table(self, search_term: str = ''):
-        """Refresh the cologne table with optional search filtering"""
+        """Refresh the cologne table with ag-grid"""
         if not self.cologne_table_container:
             return
 
@@ -117,58 +113,86 @@ class CollectionTab(BaseTab):
                     )
                 return
 
+            # Prepare data for ag-grid
+            rows = []
+            for cologne in colognes:
+                cologne_id = getattr(cologne, 'id', None)
+                wear_count = len(self.db.get_wear_history(cologne_id))
+                notes_list = getattr(cologne, 'notes', [])
+                notes_text = ', '.join([getattr(n, 'name', str(n)) for n in notes_list]) if notes_list else 'No notes'
+
+                rows.append({
+                    'id': cologne_id,
+                    'name': getattr(cologne, 'name', 'Unknown'),
+                    'brand': getattr(cologne, 'brand', 'Unknown'),
+                    'notes': notes_text,
+                    'wears': wear_count
+                })
+
+            # Column definitions
+            columns = [
+                {'field': 'name', 'headerName': 'Name', 'sortable': True, 'filter': True, 'resizable': True, 'flex': 1.5},
+                {'field': 'brand', 'headerName': 'Brand', 'sortable': True, 'filter': True, 'resizable': True, 'flex': 1.5},
+                {'field': 'notes', 'headerName': 'Notes', 'sortable': True, 'filter': True, 'resizable': True, 'flex': 2,
+                 'tooltipField': 'notes', 'cellRenderer': 'agTooltipCellRenderer'},
+                {'field': 'wears', 'headerName': 'Wears', 'sortable': True, 'width': 100, 'type': 'numericColumn'},
+            ]
+
             with self.cologne_table_container:
-                # Action buttons
+                # Action buttons row
                 with ui.row().classes('w-full justify-between items-center p-4 bg-gray-50 dark:bg-gray-700'):
-                    ui.label(f'Showing {len(colognes)} cologne(s)').classes(
-                        'text-sm text-gray-600 dark:text-gray-300'
-                    )
-                    ui.button('Add Cologne',
-                              on_click=self.show_add_cologne_dialog,
-                              icon='add').classes(
-                        'bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 '
-                        'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift'
-                    )
+                    # Left side - count and action buttons
+                    with ui.row().classes('items-center gap-4'):
+                        ui.label(f'Showing {len(colognes)} cologne(s)').classes(
+                            'text-sm text-gray-600 dark:text-gray-300'
+                        )
+                        ui.button('Log Wear', icon='event',
+                                  on_click=self.show_log_wear_from_grid).classes(
+                            'bg-blue-500 hover:bg-blue-600 text-white font-medium px-3 py-2 rounded-lg'
+                        ).tooltip('Select a cologne and log a wear')
+                        ui.button('Quick Log', icon='flash_on',
+                                  on_click=self.quick_log_from_grid).classes(
+                            'bg-green-500 hover:bg-green-600 text-white font-medium px-3 py-2 rounded-lg'
+                        ).tooltip('Select a cologne and quick log a wear')
 
-                # Table headers
-                with ui.row().classes('w-full p-4 bg-gray-100 dark:bg-gray-600 font-semibold text-gray-800 dark:text-gray-200'):
-                    ui.label('Name').classes('flex-1')
-                    ui.label('Brand').classes('flex-1')
-                    ui.label('Notes').classes('flex-1')
-                    ui.label('Wears').classes('w-20 text-center')
-                    ui.label('Actions').classes('w-32 text-center')
+                    # Right side - add and import buttons
+                    with ui.row().classes('items-center gap-2'):
+                        # Bulk import button
+                        if self.settings_tab:
+                            with ui.upload(on_upload=self.settings_tab.handle_csv_upload, multiple=False).props('accept=".csv"').classes(
+                                'bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 '
+                                'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift'
+                            ) as upload:
+                                ui.button('Bulk Import', icon='upload_file').props('flat').classes('text-white')
+                                upload.tooltip('Upload CSV with columns: name, brand, notes (semicolon separated), classifications (semicolon separated)')
 
-                # Cologne rows
-                for cologne in colognes:
-                    # Count wears using get_wear_history
-                    wear_count = len(self.db.get_wear_history(getattr(cologne, 'id', None)))
+                        ui.button('Add Cologne',
+                                  on_click=self.show_add_cologne_dialog,
+                                  icon='add').classes(
+                            'bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 '
+                            'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift'
+                        )
 
-                    with ui.row().classes(
-                        'w-full p-4 border-b border-gray-200 dark:border-gray-600 '
-                        'hover:bg-gray-50 dark:hover:bg-gray-700 smooth-transition items-center'
-                    ):
-                        name_val = getattr(cologne, 'name', None)
-                        brand_val = getattr(cologne, 'brand', None)
-                        ui.label(str(name_val) if name_val else 'Unknown').classes('flex-1 font-medium text-gray-900 dark:text-gray-100')
-                        ui.label(str(brand_val) if brand_val else 'Unknown').classes('flex-1 text-gray-700 dark:text-gray-300')
+                # Ag-grid table
+                self.selected_cologne_id = None  # Track selected cologne
+                self.cologne_grid = ui.aggrid({
+                    'columnDefs': columns,
+                    'rowData': rows,
+                    'defaultColDef': {
+                        'sortable': True,
+                        'filter': True,
+                        'resizable': True,
+                    },
+                    'domLayout': 'normal',
+                    'pagination': True,
+                    'paginationPageSize': 20,
+                    'rowSelection': 'single',
+                    'suppressRowClickSelection': False,  # Allow row selection by clicking
+                    'onSelectionChanged': 'function(event) { console.log("Selection changed:", event.api.getSelectedRows()); }',
+                }).classes('w-full mb-20').style('height: 400px;')
 
-                        # Notes with truncation
-                        notes_text = ', '.join([getattr(n, 'name', str(n)) for n in getattr(cologne, 'notes', [])]) if getattr(cologne, 'notes', None) else 'No notes'
-                        if len(notes_text) > 50:
-                            notes_text = notes_text[:47] + '...'
-                        ui.label(notes_text).classes('flex-1 text-sm text-gray-600 dark:text-gray-400')
-
-                        ui.label(str(wear_count)).classes('w-20 text-center text-gray-800 dark:text-gray-200')
-
-                        with ui.row().classes('w-32 gap-1 justify-center'):
-                            ui.button(icon='event',
-                                      on_click=lambda c=cologne: self.show_log_wear_dialog(getattr(c, 'id', None))).classes(
-                                'bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-md smooth-transition'
-                            ).tooltip(f'Log wear for {getattr(cologne, "name", "")}').props('size=sm')
-                            ui.button(icon='flash_on',
-                                      on_click=lambda c=cologne: self.quick_log_wear(getattr(c, 'id', None))).classes(
-                                'bg-green-500 hover:bg-green-600 text-white p-2 rounded-md smooth-transition'
-                            ).tooltip(f'Quick wear log for {getattr(cologne, "name", "")}').props('size=sm')
+                # Set up selection tracking with JavaScript
+                self.cologne_grid.on('selectionChanged', self._on_selection_changed)
 
         except Exception as e:
             with self.cologne_table_container:
@@ -179,6 +203,49 @@ class CollectionTab(BaseTab):
         if self.search_input:
             search_term = self.search_input.value or ''
             self.refresh_cologne_table(search_term)
+
+    def _on_selection_changed(self, event):
+        """Handle row selection changes in ag-grid"""
+        try:
+            if event and hasattr(event, 'args') and event.args:
+                # Get selected rows from the event
+                selected_rows = event.args.get('selected_rows', [])
+                if selected_rows:
+                    self.selected_cologne_id = selected_rows[0]['id']
+                else:
+                    self.selected_cologne_id = None
+            else:
+                self.selected_cologne_id = None
+        except Exception:
+            self.selected_cologne_id = None
+
+    def show_log_wear_from_grid(self):
+        """Show log wear dialog for selected cologne from grid"""
+        if self.selected_cologne_id:
+            self.show_log_wear_dialog(self.selected_cologne_id)
+        else:
+            ui.notify('Please select a cologne first', type='warning')
+
+    def quick_log_from_grid(self):
+        """Quick log wear for selected cologne from grid"""
+        if self.selected_cologne_id:
+            self.quick_log_wear(self.selected_cologne_id)
+        else:
+            ui.notify('Please select a cologne first', type='warning')
+
+    def refresh_cologne_image(self, cologne):
+        """Refresh image for a specific cologne"""
+        try:
+            cologne_id = getattr(cologne, 'id', None)
+            if cologne_id:
+                success = self.db.refresh_cologne_image(cologne_id)
+                if success:
+                    ui.notify(f'Image updated for {getattr(cologne, "name", "cologne")}', type='positive')
+                    self.refresh_cologne_table()  # Refresh the display
+                else:
+                    ui.notify('Could not fetch image', type='warning')
+        except Exception as e:
+            ui.notify(f'Error updating image: {str(e)}', type='negative')
 
     def show_add_cologne_dialog(self):
         """Show dialog to add a new cologne"""
@@ -347,8 +414,16 @@ class CollectionTab(BaseTab):
         self.recommendation_card.clear()
 
         try:
-            # Use get_recommendations and pick the first
+            # Force rebuild of recommender to get fresh recommendations
+            self.db._rebuild_recommender()
             recs = self.db.get_recommendations()
+
+            # Filter out recently recommended colognes
+            if recs and self.recent_recommendations:
+                excluded_ids = [rec['id'] for rec in self.recent_recommendations]
+                filtered_recs = [rec for rec in recs if getattr(rec, 'id', None) not in excluded_ids]
+                recs = filtered_recs if filtered_recs else recs  # Fallback to original if all are filtered
+
             recommendation = recs[0] if recs else None
 
             with self.recommendation_card:
@@ -377,12 +452,42 @@ class CollectionTab(BaseTab):
 
                             ui.button('Wear This',
                                       on_click=lambda: self.quick_log_wear(rec_id)).classes('mt-2')
+
+                    # Track this recommendation
+                    if recommendation:
+                        self._track_recommendation(recommendation)
                 else:
-                    ui.label('No recommendations found').classes('text-gray-500 dark:text-gray-400')
+                    # Check if we have colognes but no wear history
+                    colognes = self.db.get_colognes()
+                    if colognes:
+                        ui.label('Add some wear history to get personalized recommendations!').classes('text-amber-600 dark:text-amber-400 text-center')
+                        ui.label('Click "Log Wear" on any cologne to start tracking.').classes('text-gray-500 dark:text-gray-400 text-sm text-center mt-2')
+                    else:
+                        ui.label('Add some colognes to your collection first!').classes('text-gray-500 dark:text-gray-400 text-center')
+                        ui.button('Add Cologne', on_click=self.show_add_cologne_dialog).classes('mt-2 bg-blue-600 text-white')
 
         except Exception as e:
             with self.recommendation_card:
                 ui.label(f'Error loading recommendation: {str(e)}').classes('text-red-500 text-sm')
+
+    def _track_recommendation(self, recommendation):
+        """Track a recommendation to prevent immediate duplicates"""
+        rec_id = getattr(recommendation, 'id', None)
+        rec_name = getattr(recommendation, 'name', None)
+
+        if rec_id and rec_name:
+            # Add to recent recommendations
+            rec_data = {'id': rec_id, 'name': rec_name}
+
+            # Remove if already exists (to update position)
+            self.recent_recommendations = [r for r in self.recent_recommendations if r['id'] != rec_id]
+
+            # Add to front
+            self.recent_recommendations.insert(0, rec_data)
+
+            # Keep only last 3
+            if len(self.recent_recommendations) > 3:
+                self.recent_recommendations = self.recent_recommendations[:3]
 
     def show_custom_recommendation_dialog(self):
         """Show dialog for custom recommendation preferences"""
