@@ -33,7 +33,7 @@ class CollectionTab(BaseTab):
         self.container = container
 
         with container:
-            with ui.row().classes('w-full gap-6 p-6'):
+            with ui.row().classes('w-full gap-6 p-6 pb-24'):
                 # Left column - Collection table
                 with ui.column().classes('flex-1'):
                     ui.label('Your Cologne Collection').classes(

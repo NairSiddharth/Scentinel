@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import webbrowser
 from nicegui import ui
 from scentinel.database import Database, Cologne, WearHistory
 from scentinel.tabs.settings_tab import SettingsTab
@@ -298,7 +299,7 @@ class ScentinelApp:
                 # Right: Help, feedback, credits
                 with ui.row().classes('items-center gap-2'):
                     ui.button('Help', on_click=lambda: self.navigate_to_tab('settings')).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
-                    ui.button('Send Feedback', on_click=lambda: ui.notify('Send feedback to: your@email.com')).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
+                    ui.button('Send Feedback', on_click=lambda: webbrowser.open('https://github.com/NairSiddharth/Scentinel/issues')).props('flat').classes('text-white text-xs rounded-md px-3 py-1 footer-btn')
                     ui.label('Made with ❤️ using NiceGUI').classes('text-white text-xs opacity-75 ml-2')
 
     def setup_accessibility_menu(self):

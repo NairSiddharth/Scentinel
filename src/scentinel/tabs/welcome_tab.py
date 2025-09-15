@@ -194,7 +194,7 @@ class WelcomeTab:
 
             # Getting Started section
             with ui.element('section').classes(
-                'w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 py-20 px-6'
+                'w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 py-20 px-6 pb-24'
             ):
                 with ui.column().classes('max-w-4xl mx-auto items-center'):
                     ui.label('Ready to Start Your Fragrance Journey?').classes(

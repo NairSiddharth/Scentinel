@@ -22,7 +22,7 @@ class SettingsTab(BaseTab):
     def setup_tab_content(self, container: Any) -> None:
         """Setup the settings tab content"""
         with container:
-            with ui.column().classes('w-full max-w-2xl mx-auto p-6 gap-6'):
+            with ui.column().classes('w-full max-w-2xl mx-auto p-6 gap-6 pb-24'):
                 ui.label('Settings & Data Management').classes(
                     'text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6 text-center'
                 )

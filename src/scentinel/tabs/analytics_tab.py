@@ -15,7 +15,7 @@ class AnalyticsTab(BaseTab):
         """Setup the analytics tab UI within the provided container"""
         self.analytics_container = container
         with container:
-            with ui.column().classes('w-full p-6'):
+            with ui.column().classes('w-full p-6 pb-24'):
                 with ui.row().classes('w-full items-center justify-between mb-6'):
                     ui.label('Fragrance Analytics Dashboard').classes(
                         'text-3xl font-bold text-gray-800 dark:text-gray-200'
