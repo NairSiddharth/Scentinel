@@ -75,7 +75,7 @@ class SettingsTab(BaseTab):
                         ui.upload(on_upload=self.handle_csv_upload, multiple=False).props('flat accept=".csv"').classes(
                             'bg-orange-50 dark:bg-orange-900 border-2 border-dashed border-orange-300 '
                             'dark:border-orange-700 rounded-lg p-6 text-orange-700 dark:text-orange-300 '
-                            'hover:bg-orange-100 dark:hover:bg-orange-800 smooth-transition'
+                            'hover:bg-orange-100 dark:hover:bg-orange-800 smooth-transition mx-auto'
                         ).tooltip('Upload CSV with columns: name, brand, notes (semicolon separated), classifications (semicolon separated)')
 
                 # Import History Section

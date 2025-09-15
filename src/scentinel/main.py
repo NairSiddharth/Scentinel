@@ -26,35 +26,30 @@ class ScentinelApp:
         if hasattr(self, 'collection_tab') and hasattr(self.collection_tab, 'show_log_wear_dialog'):
             self.collection_tab.show_log_wear_dialog()
 
-    def toggle_dark_mode(self, e=None):
+
+    def toggle_dark_mode(self):
         """Toggle dark mode and update UI"""
         self.dark_mode = not self.dark_mode
-
         # Update body class
         mode = 'dark-mode' if self.dark_mode else 'light-mode'
-        # Preserve existing font size and accessibility classes
         ui.run_javascript(f'''
             document.body.classList.remove('dark-mode', 'light-mode');
             document.body.classList.add('{mode}');
         ''')
-
         # Update header gradient
         if self.header_container:
             if self.dark_mode:
                 self.header_container.classes(remove='header-gradient-light', add='header-gradient-dark')
             else:
                 self.header_container.classes(remove='header-gradient-dark', add='header-gradient-light')
-
         # Update footer gradient
         if self.footer_container:
             if self.dark_mode:
                 self.footer_container.classes(remove='footer-gradient-light', add='footer-gradient-dark')
             else:
                 self.footer_container.classes(remove='footer-gradient-dark', add='footer-gradient-light')
-
         ui.notify(f'Switched to {"dark" if self.dark_mode else "light"} mode', type='info')
 
-    
     def __init__(self):
         self.db = Database()
 
@@ -321,22 +316,41 @@ class ScentinelApp:
             with ui.button(icon='accessibility', on_click=lambda: None).classes(
                 'bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl smooth-transition'
             ).props('flat'):
-                with ui.menu().props('auto-close'):
-                    ui.menu_item('Dark Mode', on_click=self.toggle_dark_mode).props(f'icon={"dark_mode" if not self.dark_mode else "light_mode"}')
+                with ui.menu().props():
+                    with ui.menu_item('Dark Mode').props('icon=dark_mode'):
+                        with ui.item_section().props('side'):
+                            ui.switch(value=self.dark_mode, on_change=lambda: self.toggle_dark_mode())
                     ui.separator()
 
-                    # Font Size Options
-                    with ui.menu_item('Font Size').props('icon=text_fields'):
-                        with ui.menu():
+                    # Font Size submenu
+                    with ui.menu_item('Font Size', auto_close=False).props('icon=text_fields'):
+                        with ui.item_section().props('side'):
+                            ui.icon('keyboard_arrow_left')
+                        with ui.menu().props('anchor="top end" self="top start" auto-close'):
                             ui.menu_item('Small', on_click=lambda: self.set_font_size('small')).props('icon=text_decrease')
                             ui.menu_item('Medium', on_click=lambda: self.set_font_size('medium')).props('icon=text_fields')
                             ui.menu_item('Large', on_click=lambda: self.set_font_size('large')).props('icon=text_increase')
                             ui.menu_item('Extra Large', on_click=lambda: self.set_font_size('extra-large')).props('icon=zoom_in')
 
-                    ui.menu_item('High Contrast', on_click=self.toggle_high_contrast).props('icon=contrast')
-                    ui.menu_item('Reduce Motion', on_click=self.toggle_reduced_motion).props('icon=motion_photos_off')
+                    # Contrast submenu
+                    with ui.menu_item('Contrast', auto_close=False).props('icon=contrast'):
+                        with ui.item_section().props('side'):
+                            ui.icon('keyboard_arrow_left')
+                        with ui.menu().props('anchor="top end" self="top start" auto-close'):
+                            ui.menu_item('Normal Contrast', on_click=lambda: self.set_contrast_mode('normal')).props('icon=visibility')
+                            ui.menu_item('High Contrast', on_click=lambda: self.set_contrast_mode('high')).props('icon=contrast')
+
+                    # Motion submenu
+                    with ui.menu_item('Motion', auto_close=False).props('icon=motion_photos_on'):
+                        with ui.item_section().props('side'):
+                            ui.icon('keyboard_arrow_left')
+                        with ui.menu().props('anchor="top end" self="top start" auto-close'):
+                            ui.menu_item('Normal Motion', on_click=lambda: self.set_motion_mode('normal')).props('icon=motion_photos_on')
+                            ui.menu_item('Reduced Motion', on_click=lambda: self.set_motion_mode('reduced')).props('icon=motion_photos_off')
+
                     ui.separator()
                     ui.menu_item('Reset All', on_click=self.reset_accessibility).props('icon=refresh')
+
 
     def set_font_size(self, size: str):
         """Set the application font size"""
@@ -349,25 +363,28 @@ class ScentinelApp:
         ui.run_javascript(f'document.body.classList.add("font-{size}");')
         ui.notify(f'Font size set to {size.replace("-", " ")}', type='info')
 
-    def toggle_high_contrast(self):
-        """Toggle high contrast mode"""
-        self.high_contrast = not self.high_contrast
-        if self.high_contrast:
+    def set_contrast_mode(self, mode: str):
+        """Set the application contrast mode"""
+        if mode == 'normal':
+            self.high_contrast = False
+            ui.run_javascript('document.body.classList.remove("high-contrast");')
+            ui.notify('Normal contrast enabled', type='info')
+        elif mode == 'high':
+            self.high_contrast = True
             ui.run_javascript('document.body.classList.add("high-contrast");')
             ui.notify('High contrast enabled', type='info')
-        else:
-            ui.run_javascript('document.body.classList.remove("high-contrast");')
-            ui.notify('High contrast disabled', type='info')
 
-    def toggle_reduced_motion(self):
-        """Toggle reduced motion for accessibility"""
-        self.reduced_motion = not self.reduced_motion
-        if self.reduced_motion:
+    def set_motion_mode(self, mode: str):
+        """Set the application motion mode"""
+        if mode == 'normal':
+            self.reduced_motion = False
+            ui.run_javascript('document.body.classList.remove("reduced-motion");')
+            ui.notify('Normal motion enabled', type='info')
+        elif mode == 'reduced':
+            self.reduced_motion = True
             ui.run_javascript('document.body.classList.add("reduced-motion");')
             ui.notify('Reduced motion enabled', type='info')
-        else:
-            ui.run_javascript('document.body.classList.remove("reduced-motion");')
-            ui.notify('Reduced motion disabled', type='info')
+
 
     def reset_accessibility(self):
         """Reset all accessibility settings to defaults"""
