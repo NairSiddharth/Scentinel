@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 import json
+import sys
 from collections import Counter
 from sqlalchemy import func, extract
 from .recommender import CologneRecommender
@@ -34,7 +35,7 @@ class Cologne(Base):
     brand = Column(String, nullable=False)
 
     # Relationships
-    wear_history = relationship("WearHistory", back_populates="cologne")
+    wear_history = relationship("WearHistory", back_populates="cologne", cascade="all, delete-orphan")
     notes = relationship("FragranceNote", secondary=cologne_notes, back_populates="colognes")
     classifications = relationship("ScentClassification", secondary=cologne_classifications, back_populates="colognes")
 
@@ -102,9 +103,25 @@ class Database:
     def __init__(self, db_name: str | None = None):
         import os
         if db_name is None:
-            # Always resolve path from project root
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            db_name = os.path.join(base_dir, 'data', 'scentinel.db')
+            # Handle both development and PyInstaller executable environments
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                # Running in PyInstaller executable - use user's app data directory
+                import tempfile
+                user_data_dir = os.path.join(os.path.expanduser('~'), '.scentinel')
+                os.makedirs(user_data_dir, exist_ok=True)
+                db_name = os.path.join(user_data_dir, 'scentinel.db')
+
+                # Copy database from bundle if it doesn't exist in user directory
+                if not os.path.exists(db_name):
+                    meipass = getattr(sys, '_MEIPASS')  # Type-safe access
+                    bundled_db = os.path.join(meipass, 'scentinel', 'data', 'scentinel.db')
+                    if os.path.exists(bundled_db):
+                        import shutil
+                        shutil.copy2(bundled_db, db_name)
+            else:
+                # Running in development
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                db_name = os.path.join(base_dir, 'data', 'scentinel.db')
         else:
             db_name = os.path.abspath(db_name)
         self.engine = create_engine(f'sqlite:///{db_name}')
@@ -117,6 +134,8 @@ class Database:
 
     def add_cologne(self, name: str, brand: str, notes: Optional[List[str]] = None, classifications: Optional[List[str]] = None) -> Cologne:
         cologne = Cologne(name=name, brand=brand)
+        self.session.add(cologne)  # Add cologne to session first
+        self.session.flush()  # Ensure cologne is tracked before adding relationships
 
         # Add notes if provided
         if notes:
@@ -125,6 +144,7 @@ class Database:
                 if not note:
                     note = FragranceNote(name=note_name)
                     self.session.add(note)
+                    self.session.flush()  # Ensure note is tracked
                 cologne.notes.append(note)
 
         # Add classifications if provided
@@ -134,9 +154,9 @@ class Database:
                 if not classification:
                     classification = ScentClassification(name=class_name)
                     self.session.add(classification)
+                    self.session.flush()  # Ensure classification is tracked
                 cologne.classifications.append(classification)
 
-        self.session.add(cologne)
         self.session.commit()
         self._rebuild_recommender()  # Update recommender with new cologne
         return cologne

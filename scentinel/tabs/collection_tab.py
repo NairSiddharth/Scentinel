@@ -20,7 +20,6 @@ class CollectionTab(BaseTab):
         self.recent_wears_container = None
         self.recent_recommendations = []  # Track last 3 recommendations
         self.recommendation_card = None
-        self.search_input = None
         self.data_change_callback = None
         self.selected_cologne_id = None  # Track selected cologne in grid
 
@@ -39,13 +38,6 @@ class CollectionTab(BaseTab):
                     ui.label('Your Cologne Collection').classes(
                         'text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4'
                     )
-                    self.search_input = ui.input('Search colognes...', on_change=self.filter_colognes).classes(
-                        'w-full mb-4 px-4 py-3 border border-gray-300 dark:border-gray-600 '
-                        'rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent '
-                        'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 '
-                        'placeholder-gray-500 dark:placeholder-gray-400 smooth-transition'
-                    )
-
 
                     self.cologne_table_container = ui.column().classes(
                         'w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg border '
@@ -97,7 +89,7 @@ class CollectionTab(BaseTab):
                             self.recommendation_card = ui.column().classes('w-full')
                             self.refresh_recommendation()
 
-    def refresh_cologne_table(self, search_term: str = ''):
+    def refresh_cologne_table(self):
         """Refresh the cologne table with ag-grid"""
         if not self.cologne_table_container:
             return
@@ -105,10 +97,8 @@ class CollectionTab(BaseTab):
         self.cologne_table_container.clear()
 
         try:
-            # Use get_colognes and filter manually if needed
+            # Get all colognes - filtering now handled by AG-Grid mini-filters
             colognes = self.db.get_colognes()
-            if search_term:
-                colognes = [c for c in colognes if search_term.lower() in (c.name or '').lower() or search_term.lower() in (c.brand or '').lower()]
 
             if not colognes:
                 with self.cologne_table_container:
@@ -152,19 +142,25 @@ class CollectionTab(BaseTab):
             with self.cologne_table_container:
                 # Action buttons row
                 with ui.row().classes('w-full justify-between items-center p-4 bg-gray-50 dark:bg-gray-700'):
-                    # Left side - count and action buttons
+                    # Left side - count and stacked action buttons
                     with ui.row().classes('items-center gap-4'):
                         ui.label(f'Showing {len(colognes)} cologne(s)').classes(
                             'text-sm text-gray-600 dark:text-gray-300'
                         )
-                        ui.button('Log Wear', icon='event',
-                                  on_click=self.show_log_wear_from_grid).classes(
-                            'bg-blue-500 hover:bg-blue-600 text-white font-medium px-3 py-2 rounded-lg'
-                        ).tooltip('Select a cologne and log a wear')
-                        ui.button('Quick Log', icon='flash_on',
-                                  on_click=self.quick_log_from_grid).classes(
-                            'bg-green-500 hover:bg-green-600 text-white font-medium px-3 py-2 rounded-lg'
-                        ).tooltip('Select a cologne and quick log a wear')
+
+                        # Stacked Log buttons to match right side design
+                        with ui.column().classes('gap-1'):
+                            ui.button('Log Wear', icon='event',
+                                      on_click=self.show_log_wear_from_grid).classes(
+                                'bg-blue-500 hover:bg-blue-600 text-white font-medium px-2 py-1 '
+                                'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift text-xs'
+                            ).style('height: 21px; width: 100px; font-size: 10px;').tooltip('Select a cologne and log a wear')
+
+                            ui.button('Quick Log', icon='flash_on',
+                                      on_click=self.quick_log_from_grid).classes(
+                                'bg-green-500 hover:bg-green-600 text-white font-medium px-2 py-1 '
+                                'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift text-xs'
+                            ).style('height: 21px; width: 100px; font-size: 10px;').tooltip('Select a cologne and quick log a wear')
 
                     # Right side - add and import buttons
                     with ui.row().classes('items-center gap-2'):
@@ -175,15 +171,24 @@ class CollectionTab(BaseTab):
                                     label="Bulk Import",
                                     on_upload=self.settings_tab.confirm_csv_upload,
                                     multiple=False
-                                ).props('accept=".csv"').style('height: 42px;')
+                                ).props('accept=".csv"').style('height: 44px;')
                                 ui.tooltip('Upload CSV with columns:\n• name\n• brand\n• notes (semicolon separated)\n• classifications (semicolon separated)')
 
-                        ui.button('Add Cologne',
-                                  on_click=self.show_add_cologne_dialog,
-                                  icon='add').classes(
-                            'bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 '
-                            'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift'
-                        ).style('height: 42px;')
+                        # Stacked Add/Remove buttons
+                        with ui.column().classes('gap-1'):
+                            ui.button('Add Cologne',
+                                      on_click=self.show_add_cologne_dialog,
+                                      icon='add').classes(
+                                'bg-green-600 hover:bg-green-700 text-white font-medium px-2 py-1 '
+                                'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift text-xs'
+                            ).style('height: 21px; width: 120px; font-size: 10px;')
+
+                            ui.button('Remove Cologne',
+                                      on_click=self.show_remove_cologne_dialog,
+                                      icon='remove').classes(
+                                'bg-red-600 hover:bg-red-700 text-white font-medium px-2 py-1 '
+                                'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift text-xs'
+                            ).style('height: 21px; width: 120px; font-size: 10px;')
 
                 # Ag-grid table
                 self.selected_cologne_id = None  # Track selected cologne
@@ -194,56 +199,60 @@ class CollectionTab(BaseTab):
                         'sortable': True,
                         'filter': True,
                         'resizable': True,
+                        'floatingFilter': True,  # Add mini-filters below headers
                     },
                     'domLayout': 'normal',
                     'pagination': True,
                     'paginationPageSize': 20,
                     'rowSelection': 'single',
                     'suppressRowClickSelection': False,  # Allow row selection by clicking
-                    'onSelectionChanged': 'function(event) { console.log("Selection changed:", event.api.getSelectedRows()); }',
-                }).classes('w-full mb-20').style('height: 400px;')
+                }, html_columns=[0]).classes('w-full mb-20').style('height: 400px;')
 
-                # Set up selection tracking with JavaScript
-                self.cologne_grid.on('selectionChanged', self._on_selection_changed)
+                # Set up selection tracking - NiceGUI way
+                self.cologne_grid.on('cellClicked', self._on_row_selected)
 
         except Exception as e:
             with self.cologne_table_container:
                 ui.label(f'Error loading colognes: {str(e)}').classes('text-red-500 p-4')
 
-    def filter_colognes(self):
-        """Filter colognes based on search input"""
-        if self.search_input:
-            search_term = self.search_input.value or ''
-            self.refresh_cologne_table(search_term)
 
-    def _on_selection_changed(self, event):
-        """Handle row selection changes in ag-grid"""
+    def _on_row_selected(self, event):
+        """Handle row selection in ag-grid"""
         try:
-            if event and hasattr(event, 'args') and event.args:
-                # Get selected rows from the event
-                selected_rows = event.args.get('selected_rows', [])
-                if selected_rows:
-                    self.selected_cologne_id = selected_rows[0]['id']
+            print(f"Row clicked event: {event}")  # Debug
+            if hasattr(event, 'args'):
+                print(f"Event args: {event.args}")  # Debug
+
+                # Get the row data from the cellClicked event
+                if 'data' in event.args:
+                    row_data = event.args['data']
+                    self.selected_cologne_id = row_data.get('id')
+                    print(f"Selected cologne ID: {self.selected_cologne_id}")  # Debug
+                    ui.notify(f'Selected: {row_data.get("name", "Unknown")}', type='info')
                 else:
                     self.selected_cologne_id = None
+                    print("No row data found")  # Debug
             else:
                 self.selected_cologne_id = None
-        except Exception:
+        except Exception as e:
+            print(f"Selection error: {e}")  # Debug
             self.selected_cologne_id = None
 
     def show_log_wear_from_grid(self):
         """Show log wear dialog for selected cologne from grid"""
+        print(f"Log wear clicked, selected ID: {self.selected_cologne_id}")  # Debug
         if self.selected_cologne_id:
             self.show_log_wear_dialog(self.selected_cologne_id)
         else:
-            ui.notify('Please select a cologne first', type='warning')
+            ui.notify('Please select a cologne from the table first', type='warning')
 
     def quick_log_from_grid(self):
         """Quick log wear for selected cologne from grid"""
+        print(f"Quick log clicked, selected ID: {self.selected_cologne_id}")  # Debug
         if self.selected_cologne_id:
             self.quick_log_wear(self.selected_cologne_id)
         else:
-            ui.notify('Please select a cologne first', type='warning')
+            ui.notify('Please select a cologne from the table first', type='warning')
 
 
     def show_add_cologne_dialog(self):
@@ -265,6 +274,66 @@ class CollectionTab(BaseTab):
                           )).classes('bg-green-600 hover:bg-green-700 text-white')
 
         dialog.open()
+
+    def show_remove_cologne_dialog(self):
+        """Show dialog to remove the selected cologne"""
+        if not self.selected_cologne_id:
+            ui.notify('Please select a cologne from the table first', type='warning')
+            return
+
+        # Get the selected cologne details
+        from scentinel.database import Cologne
+        cologne = self.db.session.query(Cologne).filter_by(id=self.selected_cologne_id).first()
+        if not cologne:
+            ui.notify('Selected cologne not found', type='warning')
+            return
+
+        with ui.dialog() as dialog, ui.card():
+            ui.label('Remove Cologne from Collection').classes('text-h6 mb-4')
+            ui.label(f'Are you sure you want to remove "{cologne.name}" by {cologne.brand}?').classes('mb-2')
+            ui.label('This action cannot be undone and will remove all associated wear history.').classes('mb-4 text-red-600 text-sm')
+
+            with ui.row().classes('w-full justify-end gap-2'):
+                ui.button('Cancel', on_click=dialog.close).props('flat')
+                ui.button('Remove Cologne',
+                          on_click=lambda: self.remove_cologne(dialog, cologne)).classes('bg-red-600 hover:bg-red-700 text-white')
+
+        dialog.open()
+
+    def remove_cologne(self, dialog: Any, cologne):
+        """Remove the selected cologne from the collection"""
+        try:
+            from scentinel.database import WearHistory
+
+            # First, explicitly delete all wear history for this cologne
+            wear_records = self.db.session.query(WearHistory).filter_by(cologne_id=cologne.id).all()
+            for wear in wear_records:
+                self.db.session.delete(wear)
+
+            # Then delete the cologne
+            self.db.session.delete(cologne)
+            self.db.session.commit()
+
+            # Clear selection
+            self.selected_cologne_id = None
+
+            # Refresh the table
+            self.refresh_cologne_table()
+
+            # Refresh recent wears to remove any that referenced this cologne
+            self.refresh_recent_wears()
+
+            # Notify data change callback if set
+            if self.data_change_callback:
+                self.data_change_callback()
+
+            dialog.close()
+            ui.notify(f'Removed "{cologne.name}" by {cologne.brand}', type='positive')
+
+        except Exception as e:
+            error_msg = str(e)
+            ui.notify(f'Error removing cologne:\n{error_msg}', type='negative', multi_line=True)
+            
 
     def add_cologne(self, dialog: Any, name: Optional[str], brand: Optional[str],
                     notes_str: Optional[str], classifications_str: Optional[str]):

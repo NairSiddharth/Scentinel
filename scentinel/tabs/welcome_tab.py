@@ -1,4 +1,16 @@
 from nicegui import ui
+import sys
+import os
+
+def get_resource_path(relative_path: str) -> str:
+    """Get the correct path for resources in both development and executable environments"""
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # Running in PyInstaller executable
+        meipass = getattr(sys, '_MEIPASS')  # Type-safe access
+        return os.path.join(meipass, relative_path)
+    else:
+        # Running in development - paths are relative to project root
+        return relative_path
 
 class WelcomeTab:
     """Welcome/Landing page tab for Scentinel."""
@@ -31,8 +43,7 @@ class WelcomeTab:
 
                 with ui.column().classes('max-w-4xl mx-auto relative z-10 items-center'):
                     # Logo and title - perfectly centered
-                    with ui.row().classes('items-center gap-4 mb-8'):
-                        ui.image('data/images/cologne.png').classes('w-16 h-16 drop-shadow-2xl')
+                    with ui.column().classes('items-center mb-8'):
                         ui.label('Scentinel').classes(
                             'text-6xl font-bold tracking-tight drop-shadow-lg'
                         )

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import webbrowser
+import sys
+import os
 from nicegui import ui
 from scentinel.database import Database, Cologne, WearHistory
 from scentinel.tabs.settings_tab import SettingsTab
@@ -8,6 +10,8 @@ from scentinel.tabs.analytics_tab import AnalyticsTab
 from scentinel.tabs.welcome_tab import WelcomeTab
 from datetime import datetime, timedelta
 from typing import List, Optional, Any, Dict
+
+
 
 class ScentinelApp:
     def navigate_to_tab(self, tab_name: str):
@@ -188,7 +192,6 @@ class ScentinelApp:
             with ui.row().classes('w-full items-center justify-between'):
                 # Left: Logo
                 with ui.row().classes('items-center gap-3 cursor-pointer').on('click', lambda: self.navigate_to_home()):
-                    ui.image('data/images/cologne.png').classes('w-8 h-8 drop-shadow-sm')
                     ui.label('Scentinel').classes('text-2xl font-bold text-white tracking-wide drop-shadow-sm')
 
                 # Center: Navigation Tabs
@@ -278,16 +281,15 @@ class ScentinelApp:
 
     def setup_footer(self):
         """Setup footer with gradient styling, full width, and useful app info/actions."""
-        APP_VERSION = "v2.0.0"  # Update as needed or load dynamically
+        APP_VERSION = "v3.0.0"  # Update as needed or load dynamically
         self.footer_container = ui.element('footer').classes(
             'footer-gradient-light smooth-transition w-full fixed bottom-0 left-0 right-0 py-4 px-6 z-50'
         )
         with self.footer_container:
             with ui.row().classes('max-w-7xl mx-auto w-full items-center justify-between'):
                 # Left: Logo, app name, version, privacy, and credits
-                with ui.column().classes('items-start gap-1'):
+                with ui.column(align_items='start').classes('items-start gap-1'):
                     with ui.row().classes('items-center gap-3'):
-                        ui.image('data/images/cologne.png').classes('w-4 h-4 opacity-90')
                         ui.label('Scentinel').classes('text-white text-base font-semibold opacity-90')
                         ui.label(APP_VERSION).classes('text-white text-xs opacity-60 ml-2')
                         ui.label('• All data stored locally').classes('text-white text-xs opacity-60 ml-2')
@@ -386,7 +388,7 @@ class ScentinelApp:
 def main():
     app_instance = ScentinelApp()
     app_instance.setup_ui()
-    ui.run(title='Scentinel', reload=False, native=True, favicon='data/images/cologne.png', show_welcome_message=False, window_size=(1200, 800)) 
+    ui.run(title='Scentinel', reload=False, native=True, show_welcome_message=False, window_size=(1200, 800)) 
 
 if __name__ in {"__main__", "__mp_main__"}:
     main()

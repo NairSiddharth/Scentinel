@@ -12,19 +12,19 @@ from typing import List, Tuple, Dict
 class VersionManager:
     def __init__(self, project_root: str = None):
         self.project_root = Path(project_root) if project_root else Path(__file__).parent.parent
-        self.version_file = self.project_root / "data" / "version.json"
+        self.version_file = self.project_root / "scentinel" / "data" / "version.json"
 
         # Version classification rules
         self.major_patterns = [
-            r"src/scentinel/main\.py",
-            r"src/scentinel/database\.py.*schema",  # Schema changes
-            r"src/scentinel/recommender\.py.*algorithm",  # Major algorithm changes
+            r"scentinel/main\.py",
+            r"scentinel/database\.py.*schema",  # Schema changes
+            r"scentinel/recommender\.py.*algorithm",  # Major algorithm changes
         ]
 
         self.minor_patterns = [
-            r"src/scentinel/tabs/.*\.py",  # Single tab changes
-            r"src/scentinel/database\.py",  # General database changes
-            r"src/scentinel/recommender\.py",  # Recommender improvements
+            r"scentinel/tabs/.*\.py",  # Single tab changes
+            r"scentinel/database\.py",  # General database changes
+            r"scentinel/recommender\.py",  # Recommender improvements
         ]
 
         self.patch_patterns = [
@@ -142,7 +142,7 @@ class VersionManager:
 
     def update_main_py_version(self, version: Dict[str, int]):
         """Update the APP_VERSION in main.py"""
-        main_py_path = self.project_root / "src" / "scentinel" / "main.py"
+        main_py_path = self.project_root / "scentinel" / "main.py"
 
         if not main_py_path.exists():
             print(f"Warning: {main_py_path} not found")
@@ -163,7 +163,7 @@ class VersionManager:
             with open(main_py_path, 'w', encoding='utf-8') as f:
                 f.write(new_content)
 
-            print(f"✅ Updated APP_VERSION to {version_string} in main.py")
+            print(f"Updated APP_VERSION to {version_string} in main.py")
 
         except Exception as e:
             print(f"Error updating main.py: {e}")
@@ -187,9 +187,9 @@ class VersionManager:
 
         version_string = self.get_version_string(new_version)
 
-        print(f"🎉 Version bumped to {version_string}")
-        print(f"📝 Change type: {change_type.upper()}")
-        print(f"📁 Files that triggered this version:")
+        print(f"Version bumped to {version_string}")
+        print(f"Change type: {change_type.upper()}")
+        print(f"Files that triggered this version:")
         for file_path in relevant_files:
             print(f"   - {file_path}")
 
@@ -216,7 +216,7 @@ class VersionManager:
         self.save_version(version)
         self.update_main_py_version(version)
 
-        print(f"✅ Manually set version to {self.get_version_string(version)}")
+        print(f"Manually set version to {self.get_version_string(version)}")
         return self.get_version_string(version)
 
 

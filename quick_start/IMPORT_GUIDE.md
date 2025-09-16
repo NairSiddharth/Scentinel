@@ -89,10 +89,12 @@ This folder contains everything you need to get started with Scentinel quickly! 
    - Or modify `sample_collection.csv` with your own fragrances
 
 2. **CSV Format Rules**:
+
    ```csv
    name,brand,notes,classifications
    Sauvage,Dior,bergamot;pepper;ambroxan,fresh;masculine;designer
    ```
+  
    - **Semicolons** separate multiple notes/classifications
    - **No spaces** around semicolons
    - **Required**: name and brand columns
@@ -104,6 +106,7 @@ This folder contains everything you need to get started with Scentinel quickly! 
    - Drag and drop your CSV file to the CSV Import area
 
 ### CSV Limitations
+
 - ❌ No wear history import
 - ❌ No ratings
 - ❌ Limited duplicate handling
