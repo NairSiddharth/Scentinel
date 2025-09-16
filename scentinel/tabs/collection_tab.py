@@ -186,9 +186,9 @@ class CollectionTab(BaseTab):
                             ui.button('Remove Cologne',
                                       on_click=self.show_remove_cologne_dialog,
                                       icon='remove').classes(
-                                'bg-red-600 hover:bg-red-700 text-white font-medium px-2 py-1 '
+                                'bg-red-600 hover:bg-red-700 text-white font-medium px-1 py-1 '
                                 'rounded-lg shadow-sm hover:shadow-md smooth-transition hover-lift text-xs'
-                            ).style('height: 21px; width: 120px; font-size: 10px;')
+                            ).style('height: 21px; width: 120px; font-size: 8px;')
 
                 # Ag-grid table
                 self.selected_cologne_id = None  # Track selected cologne
@@ -291,7 +291,8 @@ class CollectionTab(BaseTab):
         with ui.dialog() as dialog, ui.card():
             ui.label('Remove Cologne from Collection').classes('text-h6 mb-4')
             ui.label(f'Are you sure you want to remove "{cologne.name}" by {cologne.brand}?').classes('mb-2')
-            ui.label('This action cannot be undone and will remove all associated wear history.').classes('mb-4 text-red-600 text-sm')
+            ui.label('This action cannot be undone and will remove all associated wear history.').classes('mb-2 text-red-600 text-sm')
+            ui.label('Analytics and recommendations will be updated to reflect this change.').classes('mb-4 text-orange-600 text-sm')
 
             with ui.row().classes('w-full justify-end gap-2'):
                 ui.button('Cancel', on_click=dialog.close).props('flat')
