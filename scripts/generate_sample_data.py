@@ -16,7 +16,7 @@ from typing import List, Tuple
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.scentinel.database import Database
+from scentinel.database import Database
 
 
 # Sample fragrance data for realistic generation

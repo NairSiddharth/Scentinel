@@ -1,77 +1,90 @@
-# 🌸 Scentinel - Advanced Fragrance Tracking & Analytics
+# Scentinel - Advanced Fragrance Tracking & Analytics
 
 **Your intelligent fragrance companion for tracking, analyzing, and discovering your perfect scent rotation.**
 
-**Note that this README.md was generated via Claude Code, it has been proofread but please report any errors spotted in the instructions and I will take a look!**
+## Table of Contents
+
+- [Features](#features)
+  - [Smart Tracking](#smart-tracking)
+  - [Advanced Analytics](#advanced-analytics)
+  - [Intelligent Recommendations](#intelligent-recommendations)
+  - [Modern UI/UX](#modern-uiux)
+- [Development Status](#development-status)
+- [Quick Start](#quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Option 1: Executable (Recommended)](#option-1-executable-recommended)
+  - [Option 2: From Source](#option-2-from-source)
+- [Usage Guide](#usage-guide)
+  - [Getting Started](#getting-started)
+  - [CSV Import](#csv-import)
+  - [JSON Templates & Bulk Import](#json-templates--bulk-import)
+  - [Data Management](#data-management)
+- [Architecture](#architecture)
+  - [Core Components](#core-components)
+  - [Database Schema](#database-schema)
+  - [Analytics Engine](#analytics-engine)
+- [Advanced Features](#advanced-features)
+  - [Smart Recommendations](#smart-recommendations)
+  - [Analytics Insights](#analytics-insights)
+- [Configuration](#configuration)
+  - [Settings](#settings)
+- [Contributing](#contributing)
+  - [Development Setup](#development-setup)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+- [Tech Stack](#tech-stack)
 
 Scentinel transforms basic cologne tracking into a comprehensive fragrance management system with AI-powered recommendations, detailed analytics, and professional bottle imagery.
 
-## ✨ Features
+## Features
 
-### 🎯 **Smart Tracking**
+### **Smart Tracking**
 
 - **Collection Management**: Track colognes with notes, brands, and classifications
 - **Wear Logging**: Record when, where, and how you rate each fragrance
 - **Seasonal Context**: Automatic season detection with occasion-based logging
 - **CSV Import/Export**: Bulk import your collection or backup your data
 
-### 📊 **Advanced Analytics**
+### **Advanced Analytics**
 
 - **Wear Frequency Insights**: Identify neglected, overused, and well-rotated bottles
 - **Seasonal Deep Dive**: Detailed analysis of your seasonal preferences and patterns
 - **Usage Patterns**: Track diversity scores and monthly breakdowns
 - **Visual Dashboard**: Interactive Plotly charts with hover details and insights
 
-### 🔍 **Intelligent Recommendations**
+### **Intelligent Recommendations**
 
 - **Rotation Suggestions**: Smart recommendations based on usage patterns and ratings
 - **Similar Fragrance Discovery**: Find new favorites based on shared notes and classifications
 - **Seasonal Matching**: Context-aware suggestions for current weather
 - **Neglected Bottle Alerts**: Rediscover forgotten gems in your collection
 
-### 📸 **Professional Imagery** *(Coming Soon)*
-
-- **Automatic Bottle Photos**: Scrapes high-quality images from fragrance databases
-- **Image Compression**: Optimized storage with automatic resizing
-- **Storage Management**: Size monitoring with cleanup utilities
-- **Offline Caching**: Local image storage with metadata tracking
-
-### 🎨 **Modern UI/UX**
+### **Modern UI/UX**
 
 - **Dark/Light Mode**: Beautiful themes with smooth transitions
 - **Responsive Design**: Works perfectly on desktop and mobile
 - **Tabbed Interface**: Clean organization with URL-based navigation
 - **Professional Styling**: Gradient headers, glass-morphism cards, and hover effects
 
-## 📝 TODO
+## Development Status
 
-1. ~~**Center the navbar**~~
-2. ~~**Center the settings buttons**~~
-3. ~~**Make the footer stretch across the full app**~~
-4. ~~**Add a "floating menu" in the bottom right corner** (dark mode toggle + other similar features)~~
-5. ~~**Move Wear Frequency Insights to the top of its section in Analytics**~~
-6. ~~**Stretch empty table in collection container**~~
-7. ~~**Generate test data**~~
-8. **Finish actual data**
-9. **Create executable**
-10. ~~**Input validation** - Sanitize and validate all user inputs for security~~
-11. **Loading states/spinners** - Add loading indicators for analytics refresh and data operations
-12. ~~**Confirm dialogs for destructive actions** - Add confirmation for data import/export operations~~
-13. **Bulk operations** - Allow selecting multiple colognes for batch actions
-14. **Advanced search filters** - Add filters by rating, last worn date, notes, etc.
-15. ~~**Usage recommendations widget** - Show "You haven't worn X in Y days" notifications~~
-16. **Performance optimization** - Optimize for large collections (1000+ fragrances)
+This project is actively developed with most core features complete. See [TODO.md](TODO.md) for current development priorities and planned features.
 
----
+**Current Status**: Production-ready with executable available. Primary focus now on performance optimization for large collections.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.8+
 - pip package manager
 
-### Installation
+### Option 1: Executable (Recommended)
+
+1. **Download the executable** from the releases page
+2. **Run Scentinel.exe** directly - no installation required!
+
+### Option 2: From Source
 
 1. **Clone the repository**
 
@@ -102,11 +115,7 @@ Scentinel transforms basic cologne tracking into a comprehensive fragrance manag
    python run.py
    ```
 
-5. **Open your browser**
-
-   Navigate to `http://localhost:8080`
-
-## 📖 Usage Guide
+## Usage Guide
 
 ### Getting Started
 
@@ -130,9 +139,9 @@ For larger collections, use our JSON templates for efficient bulk import:
 
 #### **Quick Start Templates**
 
-- `data/cologne_example_template.json` - 5 real examples + 5 empty slots
-- `data/cologne_template_50.json` - 50 empty cologne slots
-- `data/TEMPLATE_GUIDE.md` - Complete usage documentation
+- `quick_start/cologne_example_template.json` - 5 real examples + 5 empty slots
+- `quick_start/cologne_template_50.json` - 50 empty cologne slots
+- `quick_start/TEMPLATE_GUIDE.md` - Complete usage documentation
 
 #### **Custom Template Generator**
 
@@ -151,10 +160,10 @@ python scripts/generate_template.py 25 --output my_collection.json
 
 **Template Features:**
 
-- ✅ **Additive Imports**: Multiple imports add to your collection (50→100→150)
-- ✅ **Duplicate Prevention**: Skips existing colognes (by name + brand)
-- ✅ **Comprehensive Data**: Supports notes, classifications, and wear history
-- ✅ **Flexible**: Empty templates or pre-filled examples
+- **Additive Imports**: Multiple imports add to your collection (50→100→150)
+- **Duplicate Prevention**: Skips existing colognes (by name + brand)
+- **Comprehensive Data**: Supports notes, classifications, and wear history
+- **Flexible**: Empty templates or pre-filled examples
 
 ### Data Management
 
@@ -162,13 +171,14 @@ python scripts/generate_template.py 25 --output my_collection.json
 - **Import**: Restore from JSON backup with full data integrity
 - **Search**: Find colognes by name, brand, notes, or classifications
 
-## 🛠 Architecture
+## Architecture
 
 ### Core Components
 
-- **`src/scentinel/main.py`**: Main NiceGUI application with tabbed interface
-- **`src/scentinel/database.py`**: SQLAlchemy models and analytics engine
-- **`src/scentinel/recommender.py`**: ML-based recommendation algorithms
+- **`scentinel/main.py`**: Main NiceGUI application with tabbed interface
+- **`scentinel/database.py`**: SQLAlchemy models and analytics engine
+- **`scentinel/recommender.py`**: ML-based recommendation algorithms
+- **`scentinel/tabs/`**: Modular tab components for UI organization
 - **`run.py`**: Application launcher script
 
 ### Database Schema
@@ -185,7 +195,7 @@ python scripts/generate_template.py 25 --output my_collection.json
 - **Similarity Matching**: Content-based filtering using Jaccard coefficients
 - **Behavioral Analysis**: User preference learning
 
-## 🎯 Advanced Features
+## Advanced Features
 
 ### Smart Recommendations
 
@@ -201,22 +211,16 @@ python scripts/generate_template.py 25 --output my_collection.json
 - **Diversity Scores**: Variety measurement in your rotation
 - **Usage Trends**: Monthly and yearly pattern analysis
 
-## 🔧 Configuration
-
-### Environment Variables
-
-- `SCENTINEL_PORT`: Application port (default: 8080)
-- `SCENTINEL_DB`: Database file path (default: scentinel.db)
+## Configuration
 
 ### Settings
 
 - **Dark Mode**: Toggle in header with system preference detection
-- **Photo Storage**: Configurable image compression and cleanup
 - **Analytics Refresh**: Real-time updates on data changes
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please see our contributing guidelines:
+I welcome contributions! Please see my contributing guidelines:
 
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b feature/amazing-feature`
@@ -230,30 +234,32 @@ We welcome contributions! Please see our contributing guidelines:
 # Install development dependencies
 pip install -r requirements.txt
 
-# Run with auto-reload for development
+# For development with hot reload, edit scentinel/main.py:
+# Change ui.run(reload=False) to ui.run(reload=True) on line 391
+
+# Run the application
 python run.py  # starts the application
 ```
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **NiceGUI**: Modern Python web framework
 - **Plotly**: Interactive data visualization
 - **Scikit-learn**: Machine learning recommendations
 - **SQLAlchemy**: Robust database management
-- **Tailwind CSS**: Beautiful, responsive styling
+- **Tailwind CSS**: Opinionated, responsive styling
 
-## 📊 Tech Stack
+## Tech Stack
 
 - **Backend**: Python, SQLAlchemy, Scikit-learn
 - **Frontend**: NiceGUI, Tailwind CSS, Plotly
 - **Database**: SQLite with advanced analytics
-- **Images**: PIL/Pillow for compression
 - **ML**: TF-IDF vectorization, cosine similarity
 
 ---
 
-**Made with ❤️ for fragrance enthusiasts who want to optimize their scent journey.**
+**Made for fragrance enthusiasts who want to optimize their scent journey.**

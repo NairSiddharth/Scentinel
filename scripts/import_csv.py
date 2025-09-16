@@ -15,7 +15,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.scentinel.database import Database
+from scentinel.database import Database
 
 
 def validate_csv_headers(csv_path: str) -> bool:
@@ -72,7 +72,7 @@ def import_csv(csv_path: str, dry_run: bool = False) -> None:
                     continue
 
                 # Check if cologne already exists
-                from src.scentinel.database import Cologne
+                from scentinel.database import Cologne
                 existing = db.session.query(Cologne).filter_by(name=name, brand=brand).first()
 
                 if existing:

@@ -15,7 +15,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.scentinel.database import Database
+from scentinel.database import Database
 
 
 def export_data(output_file: str | None = None) -> str:
